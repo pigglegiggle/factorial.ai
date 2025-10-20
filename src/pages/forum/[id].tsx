@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/components/AuthContext';
-import { useSocket } from '@/components/SocketContext';
+import { useSSE } from '@/components/SSEContext';
 import { 
   MessageSquare, 
   ThumbsUp, 
@@ -60,7 +60,6 @@ export default function ForumPostPage() {
   const { id } = router.query;
   const { user, token } = useAuth();
   const { 
-    socket, 
     isConnected, 
     connectionMode,
     typingUsers, 
@@ -70,8 +69,9 @@ export default function ForumPostPage() {
     stopTyping, 
     emitNewComment,
     emitVoteUpdate,
-    setRefreshCallbacks
-  } = useSocket();
+    onCommentAdded,
+    onVoteUpdated
+  } = useSSE();
   
   const [post, setPost] = useState<ForumPost | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -94,52 +94,37 @@ export default function ForumPostPage() {
       fetchComments();
       
       // Join the post room for real-time updates
-      if (user && (socket || connectionMode === 'polling')) {
+      if (user && connectionMode === 'sse') {
         joinPost(parseInt(id as string));
         
-        // Set up refresh callbacks for polling mode
-        setRefreshCallbacks({
-          comments: fetchComments,
-          votes: fetchPost
-        });
+        // Set up event callbacks for SSE
+        onCommentAdded(handleNewComment);
+        onVoteUpdated(handleVoteUpdate);
       }
     }
-  }, [id, currentPage, user, socket, connectionMode]);
+  }, [id, currentPage, user, connectionMode]);
 
-  // Socket event listeners
-  useEffect(() => {
-    if (!socket) return;
+  // Event handlers for SSE callbacks
+  const handleNewComment = (comment: Comment) => {
+    // Check if comment already exists to prevent duplicates
+    setComments(prev => {
+      const commentExists = prev.some(c => c.id === comment.id);
+      if (!commentExists) {
+        // Update pagination count only if it's a new comment
+        setPagination(prevPag => prevPag ? {
+          ...prevPag,
+          total_comments: prevPag.total_comments + 1
+        } : null);
+        return [comment, ...prev];
+      }
+      return prev;
+    });
+  };
 
-    // Listen for new comments (from other users only due to socket.to())
-    const handleNewComment = (comment: Comment) => {
-      // Check if comment already exists to prevent duplicates
-      setComments(prev => {
-        const commentExists = prev.some(c => c.id === comment.id);
-        if (!commentExists) {
-          // Update pagination count only if it's a new comment
-          setPagination(prevPag => prevPag ? {
-            ...prevPag,
-            total_comments: prevPag.total_comments + 1
-          } : null);
-          return [comment, ...prev];
-        }
-        return prev;
-      });
-    };
-
-    // Listen for vote updates
-    const handleVoteUpdate = ({ upvotes, downvotes }: { upvotes: number; downvotes: number }) => {
-      setPost(prev => prev ? { ...prev, upvotes, downvotes } : null);
-    };
-
-    socket.on('comment-added', handleNewComment);
-    socket.on('votes-updated', handleVoteUpdate);
-
-    return () => {
-      socket.off('comment-added', handleNewComment);
-      socket.off('votes-updated', handleVoteUpdate);
-    };
-  }, [socket]);
+  // Handle vote updates
+  const handleVoteUpdate = ({ upvotes, downvotes }: { upvotes: number; downvotes: number }) => {
+    setPost(prev => prev ? { ...prev, upvotes, downvotes } : null);
+  };
 
   // Cleanup on unmount
   useEffect(() => {
@@ -440,8 +425,7 @@ export default function ForumPostPage() {
                 <div className="flex items-center space-x-1 text-green-400">
                   <Wifi className="h-4 w-4" />
                   <span className="text-xs">
-                    {connectionMode === 'websocket' ? 'Live (WebSocket)' : 
-                     connectionMode === 'polling' ? 'Live (Polling)' : 'Live'}
+                    {connectionMode === 'sse' ? 'Live (SSE)' : 'Live'}
                   </span>
                 </div>
               ) : (
@@ -588,8 +572,8 @@ export default function ForumPostPage() {
                 disabled={isSubmittingComment}
               />
               
-              {/* Typing indicator - only show in WebSocket mode */}
-              {connectionMode === 'websocket' && typingUsers.length > 0 && (
+              {/* Typing indicator - only show in SSE mode */}
+              {connectionMode === 'sse' && typingUsers.length > 0 && (
                 <div className="text-sm text-blue-400 animate-pulse">
                   {typingUsers.length === 1 
                     ? `${typingUsers[0].username} is typing...`
@@ -600,10 +584,16 @@ export default function ForumPostPage() {
                 </div>
               )}
               
-              {/* Polling mode notice */}
-              {connectionMode === 'polling' && (
-                <div className="text-sm text-yellow-400">
-                  Real-time mode (updates every 3 seconds)
+              {/* Real-time status */}
+              {isConnected ? (
+                <div className="text-sm text-green-400 flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span>Real-time updates active</span>
+                </div>
+              ) : (
+                <div className="text-sm text-yellow-400 flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                  <span>Connecting to real-time updates...</span>
                 </div>
               )}
               <div className="flex justify-between items-center">
