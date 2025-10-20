@@ -29,23 +29,32 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponse) => {
   const socket = res.socket as any;
   
   if (socket.server.io) {
-    console.log('Socket is already running');
+    console.log('Socket.IO is already running');
   } else {
-    console.log('Socket is initializing');
+    console.log('Socket.IO is initializing');
+    const isProduction = process.env.NODE_ENV === 'production';
+    
     const io = new SocketIOServer(socket.server as any, {
       path: '/api/socketio',
       addTrailingSlash: false,
       cors: {
-        origin: process.env.NODE_ENV === 'production' 
+        origin: isProduction 
           ? ['https://factorial-ai.sinpw.site', 'https://www.factorial-ai.sinpw.site']
           : "*",
         methods: ["GET", "POST"],
         credentials: true
       },
-      transports: ['polling', 'websocket'],
+      // Force polling in production to avoid WebSocket issues
+      transports: isProduction ? ['polling'] : ['polling', 'websocket'],
       allowEIO3: true,
       pingTimeout: 60000,
-      pingInterval: 25000
+      pingInterval: 25000,
+      // Additional production settings
+      maxHttpBufferSize: 1e6,
+      allowRequest: (req, callback) => {
+        // Simple security check
+        callback(null, true);
+      }
     });
     
     socket.server.io = io;

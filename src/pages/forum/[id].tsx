@@ -445,9 +445,9 @@ export default function ForumPostPage() {
                   </span>
                 </div>
               ) : (
-                <div className="flex items-center space-x-1 text-red-400">
+                <div className="flex items-center space-x-1 text-yellow-400">
                   <WifiOff className="h-4 w-4" />
-                  <span className="text-xs">Offline</span>
+                  <span className="text-xs">Connecting...</span>
                 </div>
               )}
             </div>

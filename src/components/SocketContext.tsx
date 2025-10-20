@@ -38,31 +38,48 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   useEffect(() => {
     if (user) {
-      // Initialize socket connection with production-friendly config
+      // Check environment settings
+      const isProduction = process.env.NODE_ENV === 'production';
+      const forcePolling = process.env.NEXT_PUBLIC_FORCE_POLLING === 'true';
+      const websocketDisabled = process.env.NEXT_PUBLIC_WEBSOCKET_DISABLED === 'true';
+      
+      // If WebSocket is disabled, go straight to polling mode
+      if (websocketDisabled || (isProduction && forcePolling)) {
+        console.log('WebSocket disabled, starting in polling mode');
+        startPollingMode();
+        return;
+      }
+      
+      // Initialize socket connection with production-safe config
       const socketInstance = io({
         path: '/api/socketio',
         addTrailingSlash: false,
-        transports: ['polling', 'websocket'], // Fallback to polling in production
-        upgrade: true,
-        rememberUpgrade: true,
+        // In production, force polling only to avoid WebSocket issues
+        transports: isProduction ? ['polling'] : ['polling', 'websocket'],
+        upgrade: !isProduction, // Only allow upgrade to WebSocket in development
+        rememberUpgrade: false,
         timeout: 20000,
         forceNew: true,
-        // Additional production settings
         autoConnect: true,
         reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
+        reconnectionAttempts: 3,
+        reconnectionDelay: 2000,
+        // Force polling in production
+        forceBase64: isProduction,
       });
 
       socketInstance.on('connect', () => {
-        console.log('Connected to WebSocket');
+        console.log('Connected to Socket.IO');
         setIsConnected(true);
-        setConnectionMode(socket?.io.engine.transport.name === 'websocket' ? 'websocket' : 'polling');
+        // In production, we're always using polling
+        const transport = isProduction ? 'polling' : (socketInstance.io.engine?.transport?.name || 'polling');
+        setConnectionMode(transport === 'websocket' ? 'websocket' : 'polling');
         setConnectionAttempts(0);
+        console.log(`Connection mode: ${transport}`);
       });
 
       socketInstance.on('disconnect', () => {
-        console.log('Disconnected from WebSocket');
+        console.log('Disconnected from Socket.IO');
         setIsConnected(false);
         setConnectionMode('offline');
       });
@@ -73,9 +90,10 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setConnectionMode('offline');
         setConnectionAttempts(prev => prev + 1);
         
-        // After 3 failed attempts, fall back to polling mode
-        if (connectionAttempts >= 3) {
-          console.log('Falling back to polling mode');
+        // After 3 failed attempts, start manual polling
+        if (connectionAttempts >= 2) {
+          console.log('Socket.IO failed, switching to manual polling mode');
+          socketInstance.disconnect();
           startPollingMode();
         }
       });
@@ -103,21 +121,42 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       return () => {
         socketInstance.disconnect();
+        // Clean up polling interval if it exists
+        if ((window as any).pollingInterval) {
+          clearInterval((window as any).pollingInterval);
+        }
       };
     }
   }, [user]);
 
-  // Polling mode fallback
+  // Enhanced polling mode fallback
   const startPollingMode = () => {
+    console.log('Starting manual polling mode');
     setConnectionMode('polling');
+    setIsConnected(true); // Show as connected in polling mode
+    
     if (!currentPostId) return;
 
+    // More frequent polling for better UX
     const interval = setInterval(() => {
-      if (refreshCallbacks.comments) refreshCallbacks.comments();
-      if (refreshCallbacks.votes) refreshCallbacks.votes();
-    }, 3000);
+      if (refreshCallbacks.comments) {
+        console.log('Polling: refreshing comments');
+        refreshCallbacks.comments();
+      }
+      if (refreshCallbacks.votes) {
+        console.log('Polling: refreshing votes');
+        refreshCallbacks.votes();
+      }
+    }, 2000); // Every 2 seconds instead of 3
 
-    return () => clearInterval(interval);
+    // Store interval for cleanup
+    (window as any).pollingInterval = interval;
+
+    return () => {
+      if ((window as any).pollingInterval) {
+        clearInterval((window as any).pollingInterval);
+      }
+    };
   };
 
   const joinPost = (postId: number) => {
