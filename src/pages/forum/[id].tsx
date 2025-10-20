@@ -34,6 +34,7 @@ interface ForumPost {
   confidence: number;
   news_content: string;
   tags: string[];
+  user_vote?: 'upvote' | 'downvote' | null;
 }
 
 interface Comment {
@@ -65,6 +66,8 @@ export default function ForumPostPage() {
   const [newComment, setNewComment] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [userVote, setUserVote] = useState<'upvote' | 'downvote' | null>(null);
+  const [isVoting, setIsVoting] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -75,14 +78,27 @@ export default function ForumPostPage() {
 
   const fetchPost = async () => {
     try {
-      const response = await fetch(`/api/forum?limit=1`);
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Include auth token if user is logged in to get user vote status
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`/api/forum?limit=50`, { headers });
       const data = await response.json();
 
       if (response.ok) {
-        // Find the specific post (this is a workaround - ideally we'd have a specific post endpoint)
+        // Find the specific post
         const foundPost = data.posts.find((p: ForumPost) => p.id === parseInt(id as string));
         if (foundPost) {
           setPost(foundPost);
+          // Set user vote if available
+          if (foundPost.user_vote) {
+            setUserVote(foundPost.user_vote);
+          }
         } else {
           setError('Post not found');
         }
@@ -122,7 +138,49 @@ export default function ForumPostPage() {
       return;
     }
 
+    if (isVoting) return; // Prevent double clicking
+
+    setIsVoting(true);
+    setError(null);
+
+    // Store previous state for rollback on error
+    const previousPost = post;
+    const previousUserVote = userVote;
+
     try {
+      // Optimistic update
+      if (post) {
+        const newPost = { ...post };
+        let newUserVote: 'upvote' | 'downvote' | null = voteType;
+
+        if (userVote === voteType) {
+          // User is removing their vote
+          newUserVote = null;
+          if (voteType === 'upvote') {
+            newPost.upvotes = Math.max(0, newPost.upvotes - 1);
+          } else {
+            newPost.downvotes = Math.max(0, newPost.downvotes - 1);
+          }
+        } else {
+          // User is changing or adding vote
+          if (userVote === 'upvote') {
+            newPost.upvotes = Math.max(0, newPost.upvotes - 1);
+          } else if (userVote === 'downvote') {
+            newPost.downvotes = Math.max(0, newPost.downvotes - 1);
+          }
+
+          if (voteType === 'upvote') {
+            newPost.upvotes += 1;
+          } else {
+            newPost.downvotes += 1;
+          }
+        }
+
+        setPost(newPost);
+        setUserVote(newUserVote);
+      }
+
+      // Make API call
       const response = await fetch(`/api/forum/${id}/vote`, {
         method: 'POST',
         headers: {
@@ -134,15 +192,31 @@ export default function ForumPostPage() {
 
       const data = await response.json();
 
-      if (response.ok) {
-        // Refresh post to get updated vote counts
-        fetchPost();
-      } else {
+      if (!response.ok) {
+        // Rollback on error
+        setPost(previousPost);
+        setUserVote(previousUserVote);
         setError(data.error || 'Failed to vote');
+      } else {
+        // Update with actual server data
+        if (data.action === 'removed') {
+          setUserVote(null);
+        } else {
+          setUserVote(data.vote_type);
+        }
+        // Optionally sync with server data if provided
+        if (data.upvotes !== undefined && data.downvotes !== undefined) {
+          setPost(prev => prev ? { ...prev, upvotes: data.upvotes, downvotes: data.downvotes } : null);
+        }
       }
     } catch (error) {
+      // Rollback on error
+      setPost(previousPost);
+      setUserVote(previousUserVote);
       console.error('Vote error:', error);
       setError('Network error. Please try again.');
+    } finally {
+      setIsVoting(false);
     }
   };
 
@@ -316,19 +390,39 @@ export default function ForumPostPage() {
           <div className="flex items-center space-x-4">
             <button
               onClick={() => handleVote('upvote')}
-              disabled={!user}
-              className="flex items-center space-x-2 px-3 py-2 rounded-lg text-green-400 hover:text-green-300 hover:bg-green-500/10 disabled:text-zinc-600 disabled:cursor-not-allowed transition-all duration-200"
+              disabled={!user || isVoting}
+              className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 ${
+                userVote === 'upvote'
+                  ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                  : 'text-green-400 hover:text-green-300 hover:bg-green-500/10'
+              } disabled:text-zinc-600 disabled:cursor-not-allowed disabled:hover:bg-transparent ${
+                isVoting ? 'opacity-50' : ''
+              }`}
             >
-              <ThumbsUp className="h-5 w-5" />
+              {isVoting && userVote !== 'downvote' ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-400"></div>
+              ) : (
+                <ThumbsUp className={`h-5 w-5 ${userVote === 'upvote' ? 'fill-current' : ''}`} />
+              )}
               <span className="font-medium">{post.upvotes}</span>
             </button>
             
             <button
               onClick={() => handleVote('downvote')}
-              disabled={!user}
-              className="flex items-center space-x-2 px-3 py-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 disabled:text-zinc-600 disabled:cursor-not-allowed transition-all duration-200"
+              disabled={!user || isVoting}
+              className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 ${
+                userVote === 'downvote'
+                  ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                  : 'text-red-400 hover:text-red-300 hover:bg-red-500/10'
+              } disabled:text-zinc-600 disabled:cursor-not-allowed disabled:hover:bg-transparent ${
+                isVoting ? 'opacity-50' : ''
+              }`}
             >
-              <ThumbsDown className="h-5 w-5" />
+              {isVoting && userVote !== 'upvote' ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-red-400"></div>
+              ) : (
+                <ThumbsDown className={`h-5 w-5 ${userVote === 'downvote' ? 'fill-current' : ''}`} />
+              )}
               <span className="font-medium">{post.downvotes}</span>
             </button>
 
