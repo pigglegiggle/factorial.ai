@@ -161,7 +161,8 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
         LEFT JOIN tags t ON nt.tag_id = t.id
         ${userId ? sql`LEFT JOIN forum_votes fv ON fp.id = fv.post_id AND fv.user_id = ${userId}` : sql``}
         GROUP BY fp.id, fp.content, fp.upvotes, fp.downvotes, fp.created_at, 
-                 u.username, nc.result_json, nc.is_fake, nc.confidence, nc.input_text, nc.input_url, fv.vote_type
+                 u.username, nc.result_json, nc.is_fake, nc.confidence, nc.input_text, nc.input_url
+                 ${userId ? sql`, fv.vote_type` : sql``}
         ORDER BY fp.created_at DESC
         LIMIT ${limitNum} OFFSET ${offset}
       `;
