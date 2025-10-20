@@ -2,6 +2,9 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { verifyToken } from '@/lib/auth';
 import { sql } from '@/lib/database';
 import { analyzeNewsWithGemini } from '@/lib/gemini';
+import { ModelTrainer } from '@/lib/model-trainer';
+
+const modelTrainer = new ModelTrainer();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -79,6 +82,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     `;
 
     const newsCheckId = newsCheckResult[0].id;
+
+    // Log this analysis for machine learning improvements
+    await modelTrainer.logAnalysisForLearning(contentToAnalyze, geminiResult, user.id);
 
     // Associate tags with news check
     if (tagResults.length > 0) {

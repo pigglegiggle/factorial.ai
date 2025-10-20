@@ -91,6 +91,13 @@ export class ModelTrainer {
     try {
       const metrics = await this.calculateAccuracyMetrics();
       
+      // TEMPORARY DEBUG: Log historical data being used
+      console.log('📈 HISTORICAL PERFORMANCE DATA:');
+      console.log(`- Total analyses with feedback: ${metrics.totalAnalyses}`);
+      console.log(`- Accuracy: ${metrics.accuracy.toFixed(1)}%`);
+      console.log(`- Overconfident cases: ${metrics.overconfidentCases}`);
+      console.log(`- Underconfident cases: ${metrics.underconfidentCases}`);
+      
       let adjustedConfidence = result.confidence;
       let adjustmentReason = 'No adjustment needed';
 
@@ -99,6 +106,7 @@ export class ModelTrainer {
         if (result.confidence > 85) {
           adjustedConfidence = Math.max(75, result.confidence - 10);
           adjustmentReason = 'Reduced due to recent overconfidence pattern';
+          console.log('⬇️ REDUCING CONFIDENCE due to overconfidence pattern');
         }
       }
 
@@ -107,6 +115,7 @@ export class ModelTrainer {
         if (result.confidence >= 60 && result.confidence < 80) {
           adjustedConfidence = Math.min(85, result.confidence + 8);
           adjustmentReason = 'Increased due to historical underconfidence on correct predictions';
+          console.log('⬆️ BOOSTING CONFIDENCE due to underconfidence pattern');
         }
       }
 
@@ -114,6 +123,7 @@ export class ModelTrainer {
       if (metrics.accuracy < 60 && metrics.totalAnalyses > 20) {
         adjustedConfidence = Math.max(50, adjustedConfidence - 15);
         adjustmentReason = 'Conservative adjustment due to low recent accuracy';
+        console.log('🚨 CONSERVATIVE ADJUSTMENT due to low accuracy');
       }
 
       // Check for similar content patterns
@@ -124,6 +134,7 @@ export class ModelTrainer {
       );
       
       if (similarContentAdjustment !== adjustedConfidence) {
+        console.log('🔍 SIMILAR CONTENT ADJUSTMENT applied');
         adjustedConfidence = similarContentAdjustment;
         adjustmentReason += ' + Similar content pattern adjustment';
       }
@@ -168,26 +179,80 @@ export class ModelTrainer {
         LIMIT 100
       `;
 
-      if (similarFeedback.length < 5) return currentConfidence;
+      console.log(`🔍 SIMILAR CONTENT ANALYSIS (${isFake ? 'FAKE' : 'REAL'} classification):`);
+      console.log(`- Found ${similarFeedback.length} similar analyses with feedback`);
+
+      if (similarFeedback.length < 5) {
+        console.log('- Not enough similar content data for adjustment');
+        return currentConfidence;
+      }
 
       // Calculate average accuracy for similar classifications
       const correctCount = similarFeedback.filter(f => f.rating >= 4).length;
       const similarAccuracy = correctCount / similarFeedback.length;
 
+      console.log(`- Similar content accuracy: ${(similarAccuracy * 100).toFixed(1)}%`);
+
       // Adjust based on similar content performance
       if (similarAccuracy < 0.6) {
         // Poor performance on similar content - be more conservative
+        console.log('- 📉 Poor performance on similar content - reducing confidence');
         return Math.max(50, currentConfidence - 10);
       } else if (similarAccuracy > 0.8) {
         // Good performance on similar content - can be more confident
+        console.log('- 📈 Good performance on similar content - slight confidence boost');
         return Math.min(95, currentConfidence + 5);
       }
 
+      console.log('- ✅ Similar content performance normal - no adjustment');
       return currentConfidence;
     } catch (error) {
       console.error('Error in similar content analysis:', error);
       return currentConfidence;
     }
+  }
+
+  /**
+   * Log successful analysis for content pattern learning
+   */
+  async logAnalysisForLearning(
+    inputContent: string,
+    result: GeminiAnalysisResult,
+    userId: number
+  ): Promise<void> {
+    try {
+      // This will be used when feedback comes in to improve future analyses
+      // The data is already stored in the database via check-news.ts
+      // But we can add additional learning metadata here if needed
+      
+      console.log(`Analysis logged for learning: ${result.is_fake ? 'FAKE' : 'REAL'} with ${result.confidence}% confidence`);
+      
+      // Could add additional learning pattern detection here
+      // For example, storing key phrases that led to the decision
+      const keyPhrases = this.extractKeyPhrases(inputContent);
+      
+      // This could be expanded to store learning patterns in a separate table
+      // For now, the main learning happens through the feedback system
+      
+    } catch (error) {
+      console.error('Error logging analysis for learning:', error);
+      // Don't throw as this is supplementary functionality
+    }
+  }
+
+  /**
+   * Extract key phrases that might be relevant for learning
+   */
+  private extractKeyPhrases(content: string): string[] {
+    const lowerContent = content.toLowerCase();
+    const keyWords = [
+      'breaking', 'exclusive', 'shocking', 'you won\'t believe',
+      'doctors hate', 'one simple trick', 'leaked', 'insider',
+      'according to sources', 'study shows', 'experts say',
+      'fact check', 'verified', 'confirmed'
+    ];
+    
+    return keyWords.filter(word => lowerContent.includes(word));
   }
 
   /**

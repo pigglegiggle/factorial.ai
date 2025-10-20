@@ -15,23 +15,80 @@ export interface GeminiAnalysisResult {
   confidence_adjusted?: boolean;
   original_confidence?: number;
   adjustment_reason?: string;
+  training_data_used?: {
+    feedback_patterns_applied: number;
+    accuracy_based_adjustment: boolean;
+    recent_feedback_count: number;
+    model_performance: number;
+  };
+  debug_training_info?: {
+    training_active: boolean;
+    prompt_enhanced: boolean;
+    confidence_guidance_applied: boolean;
+    performance_context_added: boolean;
+    historical_accuracy: number;
+    feedback_trend: string;
+    suggestion_prompts: string[];
+  };
 }
 
 export async function analyzeNewsWithGemini(input: string, isUrl: boolean = false): Promise<GeminiAnalysisResult> {
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
     
-    // Get feedback-based improvements
+    // Get feedback-based improvements and model training insights
     const feedbackAnalysis = await feedbackAnalyzer.analyzeFeedbackPatterns();
     const feedbackStats = await feedbackAnalyzer.getFeedbackStats();
+    const accuracyMetrics = await modelTrainer.calculateAccuracyMetrics();
     
-    // Build enhanced prompt based on feedback insights
+    // TEMPORARY DEBUG: Log training data being used
+    console.log('🧠 TRAINING DATA BEING USED:');
+    console.log('- Feedback patterns found:', feedbackAnalysis.suggestionPrompts.length);
+    console.log('- Historical accuracy:', accuracyMetrics.accuracy + '%');
+    console.log('- Total training feedback:', feedbackStats.totalFeedback);
+    console.log('- Recent trend:', feedbackStats.recentTrend);
+    
+    // Build enhanced prompt based on feedback insights and training data
     let enhancedInstructions = '';
+    let confidenceGuidance = '';
+    
     if (feedbackAnalysis.suggestionPrompts.length > 0) {
       enhancedInstructions = `
 IMPORTANT - Based on user feedback analysis, please pay special attention to these areas:
 ${feedbackAnalysis.suggestionPrompts.map(suggestion => `- ${suggestion}`).join('\n')}
 `;
+      console.log('✅ APPLYING FEEDBACK-BASED IMPROVEMENTS TO PROMPT');
+    } else {
+      console.log('ℹ️ No feedback patterns to apply yet');
+    }
+
+    // Add confidence calibration guidance based on historical performance
+    if (accuracyMetrics.totalAnalyses >= 10) {
+      if (accuracyMetrics.overconfidentCases > accuracyMetrics.totalAnalyses * 0.15) {
+        confidenceGuidance = `
+CONFIDENCE GUIDANCE: Recent analysis shows overconfidence in predictions. Be more conservative with confidence scores above 85%.
+`;
+        console.log('⚠️ APPLYING OVERCONFIDENCE CORRECTION');
+      } else if (accuracyMetrics.underconfidentCases > accuracyMetrics.totalAnalyses * 0.20) {
+        confidenceGuidance = `
+CONFIDENCE GUIDANCE: Analysis shows you can be more confident in well-supported conclusions. Consider higher confidence for clear cases.
+`;
+        console.log('📈 APPLYING UNDERCONFIDENCE BOOST');
+      }
+    } else {
+      console.log('📊 Not enough data for confidence calibration yet');
+    }
+
+    // Add recent performance context
+    let performanceContext = '';
+    if (feedbackStats.totalFeedback >= 5) {
+      performanceContext = `
+PERFORMANCE CONTEXT: Recent user feedback average: ${feedbackStats.averageRating.toFixed(1)}/5.0 (${feedbackStats.recentTrend})
+This helps you understand how users are rating recent analyses.
+`;
+      console.log('📊 ADDING PERFORMANCE CONTEXT TO PROMPT');
+    } else {
+      console.log('📊 Not enough feedback for performance context yet');
     }
 
     const prompt = `
@@ -39,6 +96,8 @@ Analyze the following ${isUrl ? 'news article URL' : 'news text'} for potential 
 
 ${isUrl ? 'URL:' : 'Text:'} ${input}
 ${enhancedInstructions}
+${confidenceGuidance}
+${performanceContext}
 Please provide a structured analysis in the following JSON format only (no additional text):
 
 {
@@ -92,13 +151,39 @@ Return only valid JSON.`;
         input
       );
 
+      // TEMPORARY DEBUG: Show confidence adjustments
+      if (confidenceAdjustment.originalConfidence !== confidenceAdjustment.adjustedConfidence) {
+        console.log('🎯 CONFIDENCE ADJUSTED BY TRAINING DATA:');
+        console.log(`- Original: ${confidenceAdjustment.originalConfidence}%`);
+        console.log(`- Adjusted: ${confidenceAdjustment.adjustedConfidence}%`);
+        console.log(`- Reason: ${confidenceAdjustment.adjustmentReason}`);
+      } else {
+        console.log('✅ Confidence maintained (no adjustment needed)');
+      }
+
       return {
         ...analysis,
         confidence: confidenceAdjustment.adjustedConfidence,
         feedback_enhanced: feedbackAnalysis.suggestionPrompts.length > 0,
         confidence_adjusted: confidenceAdjustment.originalConfidence !== confidenceAdjustment.adjustedConfidence,
         original_confidence: confidenceAdjustment.originalConfidence,
-        adjustment_reason: confidenceAdjustment.adjustmentReason
+        adjustment_reason: confidenceAdjustment.adjustmentReason,
+        training_data_used: {
+          feedback_patterns_applied: feedbackAnalysis.suggestionPrompts.length,
+          accuracy_based_adjustment: accuracyMetrics.totalAnalyses >= 10,
+          recent_feedback_count: feedbackStats.totalFeedback,
+          model_performance: accuracyMetrics.accuracy
+        },
+        // TEMPORARY: Add debug info to response
+        debug_training_info: {
+          training_active: feedbackStats.totalFeedback >= 5,
+          prompt_enhanced: enhancedInstructions.length > 0,
+          confidence_guidance_applied: confidenceGuidance.length > 0,
+          performance_context_added: performanceContext.length > 0,
+          historical_accuracy: accuracyMetrics.accuracy,
+          feedback_trend: feedbackStats.recentTrend,
+          suggestion_prompts: feedbackAnalysis.suggestionPrompts
+        }
       };
     } catch (parseError) {
       console.error('Failed to parse Gemini response as JSON:', parseError);
