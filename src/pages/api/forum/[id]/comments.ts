@@ -94,7 +94,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse, postId: numb
       FROM forum_comments fc
       JOIN users u ON fc.user_id = u.id
       WHERE fc.post_id = ${postId}
-      ORDER BY fc.created_at ASC
+      ORDER BY fc.created_at DESC
       LIMIT ${limitNum} OFFSET ${offset}
     `;
 

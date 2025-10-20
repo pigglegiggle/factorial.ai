@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/components/AuthContext';
-import { useSSE } from '@/components/SSEContext';
 import { 
   MessageSquare, 
   ThumbsUp, 
@@ -59,19 +58,6 @@ export default function ForumPostPage() {
   const router = useRouter();
   const { id } = router.query;
   const { user, token } = useAuth();
-  const { 
-    isConnected, 
-    connectionMode,
-    typingUsers, 
-    joinPost, 
-    leavePost, 
-    startTyping, 
-    stopTyping, 
-    emitNewComment,
-    emitVoteUpdate,
-    onCommentAdded,
-    onVoteUpdated
-  } = useSSE();
   
   const [post, setPost] = useState<ForumPost | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -85,53 +71,44 @@ export default function ForumPostPage() {
   const [userVote, setUserVote] = useState<'upvote' | 'downvote' | null>(null);
   const [isVoting, setIsVoting] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<{ userId: number; username: string }[]>([]);
+  const [newlyAddedCommentIds, setNewlyAddedCommentIds] = useState<Set<number>>(new Set());
   
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (id) {
       fetchPost();
       fetchComments();
       
-      // Join the post room for real-time updates
-      if (user && connectionMode === 'sse') {
-        joinPost(parseInt(id as string));
-        
-        // Set up event callbacks for SSE
-        onCommentAdded(handleNewComment);
-        onVoteUpdated(handleVoteUpdate);
+      // Start polling for updates every 2 seconds
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
       }
+      
+      pollingIntervalRef.current = setInterval(() => {
+        // Refresh data periodically for real-time feel
+        fetchPost();
+        fetchComments();
+      }, 2000);
     }
-  }, [id, currentPage, user, connectionMode]);
 
-  // Event handlers for SSE callbacks
-  const handleNewComment = (comment: Comment) => {
-    // Check if comment already exists to prevent duplicates
-    setComments(prev => {
-      const commentExists = prev.some(c => c.id === comment.id);
-      if (!commentExists) {
-        // Update pagination count only if it's a new comment
-        setPagination(prevPag => prevPag ? {
-          ...prevPag,
-          total_comments: prevPag.total_comments + 1
-        } : null);
-        return [comment, ...prev];
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
       }
-      return prev;
-    });
-  };
-
-  // Handle vote updates
-  const handleVoteUpdate = ({ upvotes, downvotes }: { upvotes: number; downvotes: number }) => {
-    setPost(prev => prev ? { ...prev, upvotes, downvotes } : null);
-  };
+    };
+  }, [id, currentPage, user]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      leavePost();
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
+      }
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
       }
     };
   }, []);
@@ -264,11 +241,9 @@ export default function ForumPostPage() {
         } else {
           setUserVote(data.vote_type);
         }
-        // Sync with server data and emit real-time update
+        // Sync with server data (broadcasting is handled by the API)
         if (data.upvotes !== undefined && data.downvotes !== undefined) {
           setPost(prev => prev ? { ...prev, upvotes: data.upvotes, downvotes: data.downvotes } : null);
-          // Emit real-time vote update to other users
-          emitVoteUpdate(parseInt(id as string), data.upvotes, data.downvotes);
         }
       }
     } catch (error) {
@@ -285,7 +260,6 @@ export default function ForumPostPage() {
   const handleTyping = () => {
     if (!isTyping) {
       setIsTyping(true);
-      startTyping();
     }
 
     // Clear previous timeout
@@ -296,13 +270,11 @@ export default function ForumPostPage() {
     // Set new timeout to stop typing after 3 seconds of inactivity
     typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false);
-      stopTyping();
     }, 3000);
   };
 
   const handleStopTyping = () => {
     setIsTyping(false);
-    stopTyping();
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
@@ -348,8 +320,19 @@ export default function ForumPostPage() {
           total_comments: prev.total_comments + 1
         } : null);
         
-        // Emit real-time update to other users
-        emitNewComment(parseInt(id as string), newCommentData);
+        // Track this as a newly added comment
+        setNewlyAddedCommentIds(prev => new Set(prev).add(newCommentData.id));
+        
+        // Remove from newly added after 30 seconds
+        setTimeout(() => {
+          setNewlyAddedCommentIds(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(newCommentData.id);
+            return newSet;
+          });
+        }, 30000);
+        
+        // Broadcasting is handled automatically by the API
       } else {
         setError(data.error || 'Failed to post comment');
       }
@@ -363,7 +346,40 @@ export default function ForumPostPage() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const now = new Date();
+    
+    // Add 7 hours to comment time to convert UTC to Bangkok time
+    const bangkokCommentTime = new Date(date.getTime() + (7 * 60 * 60 * 1000));
+    
+    // Calculate time difference
+    const diffMs = now.getTime() - bangkokCommentTime.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    // Show relative time in English for recent comments
+    if (diffMins < 1) {
+      return 'Just now';
+    } else if (diffMins < 60) {
+      return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    } else if (diffDays < 7) {
+      return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    } else {
+      // For older posts, show Bangkok time in English
+      return date.toLocaleDateString('en-US', { 
+        timeZone: 'Asia/Bangkok',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      }) + ' ' + date.toLocaleTimeString('en-US', { 
+        timeZone: 'Asia/Bangkok',
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+      });
+    }
   };
 
   const getResultColor = (isFake: boolean) => {
@@ -421,19 +437,10 @@ export default function ForumPostPage() {
           
           {user && (
             <div className="flex items-center space-x-2">
-              {isConnected ? (
-                <div className="flex items-center space-x-1 text-green-400">
-                  <Wifi className="h-4 w-4" />
-                  <span className="text-xs">
-                    {connectionMode === 'sse' ? 'Live (SSE)' : 'Live'}
-                  </span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-1 text-yellow-400">
-                  <WifiOff className="h-4 w-4" />
-                  <span className="text-xs">Connecting...</span>
-                </div>
-              )}
+              <div className="flex items-center space-x-1 text-blue-400">
+                <Wifi className="h-4 w-4" />
+                <span className="text-xs">Live (Polling)</span>
+              </div>
             </div>
           )}
         </div>
@@ -572,30 +579,11 @@ export default function ForumPostPage() {
                 disabled={isSubmittingComment}
               />
               
-              {/* Typing indicator - only show in SSE mode */}
-              {connectionMode === 'sse' && typingUsers.length > 0 && (
-                <div className="text-sm text-blue-400 animate-pulse">
-                  {typingUsers.length === 1 
-                    ? `${typingUsers[0].username} is typing...`
-                    : typingUsers.length === 2
-                    ? `${typingUsers[0].username} and ${typingUsers[1].username} are typing...`
-                    : `${typingUsers[0].username} and ${typingUsers.length - 1} others are typing...`
-                  }
-                </div>
-              )}
-              
-              {/* Real-time status */}
-              {isConnected ? (
-                <div className="text-sm text-green-400 flex items-center space-x-1">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span>Real-time updates active</span>
-                </div>
-              ) : (
-                <div className="text-sm text-yellow-400 flex items-center space-x-1">
-                  <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-                  <span>Connecting to real-time updates...</span>
-                </div>
-              )}
+              {/* Polling status */}
+              <div className="text-sm text-blue-400 flex items-center space-x-1">
+                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                <span>Auto-refreshing every 2 seconds</span>
+              </div>
               <div className="flex justify-between items-center">
                 <p className="text-sm text-zinc-500">
                   {newComment.length}/5 characters minimum
@@ -634,12 +622,10 @@ export default function ForumPostPage() {
             <h3 className="font-medium text-white">
               Comments ({pagination?.total_comments || 0})
             </h3>
-            {isConnected && (
-              <div className="flex items-center space-x-1 text-green-400 text-xs">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span>Real-time</span>
-              </div>
-            )}
+            <div className="flex items-center space-x-1 text-blue-400 text-xs">
+              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+              <span>Auto-refresh</span>
+            </div>
           </div>
 
           {comments.length === 0 ? (
@@ -650,21 +636,37 @@ export default function ForumPostPage() {
           ) : (
             <>
               {comments.map((comment, index) => {
-                const isNew = index === 0 && new Date(comment.created_at) > new Date(Date.now() - 5000);
+                // Use UTC for time comparison (more reliable)
+                const commentTime = new Date(comment.created_at);
+                const now = new Date();
+                const timeDiff = now.getTime() - commentTime.getTime();
+                
+                // Show effect for newly added comments OR comments less than 2 minutes old
+                const isNew = newlyAddedCommentIds.has(comment.id) || (timeDiff < 120000);
+                
+                // Debug log
+                console.log(`Comment ${comment.id}: isNew=${isNew}, index=${index}, timeDiff=${Math.round(timeDiff/1000)}s, inNewlyAdded=${newlyAddedCommentIds.has(comment.id)}`);
+                
                 return (
                   <div 
                     key={comment.id} 
-                    className={`bg-zinc-900/50 backdrop-blur-sm rounded-lg border border-zinc-800 p-4 transition-all duration-300 ${
-                      isNew ? 'animate-pulse border-blue-500/30 bg-blue-500/5' : ''
+                    className={`backdrop-blur-sm rounded-xl border p-5 mb-4 transition-all duration-1000 relative ${
+                      isNew 
+                        ? 'new-comment-glow new-comment-shimmer border-4 border-red-500 bg-red-900/50' 
+                        : 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/70'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        <User className="h-4 w-4 text-zinc-400" />
-                        <span className="font-medium text-white">{comment.username}</span>
-                        {isNew && (
-                          <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded-full">New</span>
-                        )}
+                    {isNew && (
+                      <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500/80 to-purple-600/80 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg new-comment-pulse backdrop-blur-sm">
+                        New
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div className={`p-1 rounded-full ${isNew ? 'bg-blue-500/20' : 'bg-zinc-700'}`}>
+                          <User className={`h-4 w-4 ${isNew ? 'text-blue-400' : 'text-zinc-400'}`} />
+                        </div>
+                        <span className={`font-medium ${isNew ? 'text-blue-100' : 'text-white'}`}>{comment.username}</span>
                       </div>
                       <div className="flex items-center space-x-1 text-zinc-500">
                         <Clock className="h-3 w-3" />

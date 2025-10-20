@@ -50,6 +50,65 @@ input::placeholder, textarea::placeholder {
   color: var(--muted-foreground) !important;
 }
 
+/* New comment animations - subtle dark theme */
+@keyframes subtleGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.3);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(147, 51, 234, 0.08));
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 15px 5px rgba(59, 130, 246, 0.15);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(147, 51, 234, 0.12));
+    transform: scale(1.01);
+  }
+  100% {
+    box-shadow: 0 0 8px 3px rgba(59, 130, 246, 0.1);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(147, 51, 234, 0.08));
+    transform: scale(1);
+  }
+}
+
+@keyframes subtlePulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes subtleShimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: 200px 0;
+  }
+}
+
+.new-comment-glow {
+  animation: subtleGlow 3s ease-in-out infinite;
+  position: relative;
+  border: 1px solid rgba(59, 130, 246, 0.4) !important;
+  background: rgba(24, 24, 27, 0.8) !important;
+}
+
+.new-comment-pulse {
+  animation: subtlePulse 2s ease-in-out infinite;
+}
+
+.new-comment-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(59, 130, 246, 0.05) 0%,
+    rgba(59, 130, 246, 0.15) 50%,
+    rgba(59, 130, 246, 0.05) 100%
+  );
+  background-size: 400px 100%;
+  animation: subtleShimmer 4s ease-in-out infinite;
+}
+
 input:focus, textarea:focus {
   outline: none !important;
   border-color: var(--primary) !important;

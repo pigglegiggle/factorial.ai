@@ -85,7 +85,18 @@ export default function HistoryPage() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    // Format in Bangkok time (Asia/Bangkok timezone)
+    return date.toLocaleDateString('th-TH', { 
+      timeZone: 'Asia/Bangkok',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    }) + ' ' + date.toLocaleTimeString('th-TH', { 
+      timeZone: 'Asia/Bangkok',
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false 
+    });
   };
 
   const getResultIcon = (isFake: boolean) => {

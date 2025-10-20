@@ -72,13 +72,16 @@ export function useSSE(): SSEContextType {
             break;
           
           case 'user-typing':
-            setTypingUsers(prev => {
-              const exists = prev.find(u => u.userId === data.userId);
-              if (!exists) {
-                return [...prev, { userId: data.userId, username: data.username }];
-              }
-              return prev;
-            });
+            // Don't show typing indicator for current user
+            if (data.userId !== user?.id) {
+              setTypingUsers(prev => {
+                const exists = prev.find(u => u.userId === data.userId);
+                if (!exists) {
+                  return [...prev, { userId: data.userId, username: data.username }];
+                }
+                return prev;
+              });
+            }
             break;
           
           case 'user-stopped-typing':
