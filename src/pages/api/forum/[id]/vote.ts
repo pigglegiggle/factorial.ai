@@ -71,9 +71,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           `;
         }
 
+        // Get updated vote counts
+        const updatedPost = await sql`
+          SELECT upvotes, downvotes FROM forum_posts WHERE id = ${postId}
+        `;
+
         return res.status(200).json({
           message: 'Vote removed',
           action: 'removed',
+          upvotes: updatedPost[0].upvotes,
+          downvotes: updatedPost[0].downvotes,
         });
       } else {
         // Change vote type
@@ -98,10 +105,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           `;
         }
 
+        // Get updated vote counts
+        const updatedPost = await sql`
+          SELECT upvotes, downvotes FROM forum_posts WHERE id = ${postId}
+        `;
+
         return res.status(200).json({
           message: 'Vote updated',
           action: 'updated',
           vote_type,
+          upvotes: updatedPost[0].upvotes,
+          downvotes: updatedPost[0].downvotes,
         });
       }
     } else {
@@ -126,10 +140,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         `;
       }
 
+      // Get updated vote counts
+      const updatedPost = await sql`
+        SELECT upvotes, downvotes FROM forum_posts WHERE id = ${postId}
+      `;
+
       return res.status(200).json({
         message: 'Vote added',
         action: 'added',
         vote_type,
+        upvotes: updatedPost[0].upvotes,
+        downvotes: updatedPost[0].downvotes,
       });
     }
 

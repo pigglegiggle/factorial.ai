@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/components/AuthContext';
+import { useSocket } from '@/components/SocketContext';
 import { 
   MessageSquare, 
   ThumbsUp, 
@@ -13,7 +14,9 @@ import {
   ArrowLeft,
   Send,
   CheckCircle,
-  AlertTriangle 
+  AlertTriangle,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -56,6 +59,17 @@ export default function ForumPostPage() {
   const router = useRouter();
   const { id } = router.query;
   const { user, token } = useAuth();
+  const { 
+    socket, 
+    isConnected, 
+    typingUsers, 
+    joinPost, 
+    leavePost, 
+    startTyping, 
+    stopTyping, 
+    emitNewComment,
+    emitVoteUpdate 
+  } = useSocket();
   
   const [post, setPost] = useState<ForumPost | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -68,13 +82,59 @@ export default function ForumPostPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [userVote, setUserVote] = useState<'upvote' | 'downvote' | null>(null);
   const [isVoting, setIsVoting] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (id) {
       fetchPost();
       fetchComments();
+      
+      // Join the post room for real-time updates
+      if (user && socket && isConnected) {
+        joinPost(parseInt(id as string));
+      }
     }
-  }, [id, currentPage]);
+  }, [id, currentPage, user, socket, isConnected]);
+
+  // Socket event listeners
+  useEffect(() => {
+    if (!socket) return;
+
+    // Listen for new comments
+    const handleNewComment = (comment: Comment) => {
+      setComments(prev => [comment, ...prev]);
+      // Update pagination count
+      setPagination(prev => prev ? {
+        ...prev,
+        total_comments: prev.total_comments + 1
+      } : null);
+    };
+
+    // Listen for vote updates
+    const handleVoteUpdate = ({ upvotes, downvotes }: { upvotes: number; downvotes: number }) => {
+      setPost(prev => prev ? { ...prev, upvotes, downvotes } : null);
+    };
+
+    socket.on('comment-added', handleNewComment);
+    socket.on('votes-updated', handleVoteUpdate);
+
+    return () => {
+      socket.off('comment-added', handleNewComment);
+      socket.off('votes-updated', handleVoteUpdate);
+    };
+  }, [socket]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      leavePost();
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const fetchPost = async () => {
     try {
@@ -204,9 +264,11 @@ export default function ForumPostPage() {
         } else {
           setUserVote(data.vote_type);
         }
-        // Optionally sync with server data if provided
+        // Sync with server data and emit real-time update
         if (data.upvotes !== undefined && data.downvotes !== undefined) {
           setPost(prev => prev ? { ...prev, upvotes: data.upvotes, downvotes: data.downvotes } : null);
+          // Emit real-time vote update to other users
+          emitVoteUpdate(parseInt(id as string), data.upvotes, data.downvotes);
         }
       }
     } catch (error) {
@@ -217,6 +279,32 @@ export default function ForumPostPage() {
       setError('Network error. Please try again.');
     } finally {
       setIsVoting(false);
+    }
+  };
+
+  const handleTyping = () => {
+    if (!isTyping) {
+      setIsTyping(true);
+      startTyping();
+    }
+
+    // Clear previous timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Set new timeout to stop typing after 3 seconds of inactivity
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+      stopTyping();
+    }, 3000);
+  };
+
+  const handleStopTyping = () => {
+    setIsTyping(false);
+    stopTyping();
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
     }
   };
 
@@ -249,8 +337,19 @@ export default function ForumPostPage() {
       const data = await response.json();
 
       if (response.ok) {
+        const newCommentData = data.comment;
         setNewComment('');
-        fetchComments(); // Refresh comments
+        handleStopTyping();
+        
+        // Add comment optimistically to local state
+        setComments(prev => [newCommentData, ...prev]);
+        setPagination(prev => prev ? {
+          ...prev,
+          total_comments: prev.total_comments + 1
+        } : null);
+        
+        // Emit real-time update to other users
+        emitNewComment(parseInt(id as string), newCommentData);
       } else {
         setError(data.error || 'Failed to post comment');
       }
@@ -310,8 +409,8 @@ export default function ForumPostPage() {
   return (
     <div className="min-h-screen bg-[#111114] text-white">
       <div className="max-w-4xl mx-auto p-6">
-        {/* Back button */}
-        <div className="mb-6">
+        {/* Back button and connection status */}
+        <div className="mb-6 flex justify-between items-center">
           <Link 
             href="/forum"
             className="flex items-center space-x-2 text-blue-400 hover:text-blue-300 transition-colors"
@@ -319,6 +418,22 @@ export default function ForumPostPage() {
             <ArrowLeft className="h-4 w-4" />
             <span>Back to Forum</span>
           </Link>
+          
+          {user && (
+            <div className="flex items-center space-x-2">
+              {isConnected ? (
+                <div className="flex items-center space-x-1 text-green-400">
+                  <Wifi className="h-4 w-4" />
+                  <span className="text-xs">Live</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-1 text-red-400">
+                  <WifiOff className="h-4 w-4" />
+                  <span className="text-xs">Offline</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {error && (
@@ -440,12 +555,32 @@ export default function ForumPostPage() {
             <form onSubmit={handleCommentSubmit} className="space-y-4">
               <textarea
                 value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
+                onChange={(e) => {
+                  setNewComment(e.target.value);
+                  if (e.target.value.length > 0) {
+                    handleTyping();
+                  } else {
+                    handleStopTyping();
+                  }
+                }}
+                onBlur={handleStopTyping}
                 placeholder="Share your thoughts on this analysis..."
                 rows={4}
                 className="w-full p-3 bg-zinc-800/50 border border-zinc-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-zinc-400"
                 disabled={isSubmittingComment}
               />
+              
+              {/* Typing indicator */}
+              {typingUsers.length > 0 && (
+                <div className="text-sm text-blue-400 animate-pulse">
+                  {typingUsers.length === 1 
+                    ? `${typingUsers[0].username} is typing...`
+                    : typingUsers.length === 2
+                    ? `${typingUsers[0].username} and ${typingUsers[1].username} are typing...`
+                    : `${typingUsers[0].username} and ${typingUsers.length - 1} others are typing...`
+                  }
+                </div>
+              )}
               <div className="flex justify-between items-center">
                 <p className="text-sm text-zinc-500">
                   {newComment.length}/5 characters minimum
@@ -480,9 +615,17 @@ export default function ForumPostPage() {
 
         {/* Comments */}
         <div className="space-y-4">
-          <h3 className="font-medium text-white">
-            Comments ({pagination?.total_comments || 0})
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium text-white">
+              Comments ({pagination?.total_comments || 0})
+            </h3>
+            {isConnected && (
+              <div className="flex items-center space-x-1 text-green-400 text-xs">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span>Real-time</span>
+              </div>
+            )}
+          </div>
 
           {comments.length === 0 ? (
             <div className="text-center py-8">
@@ -491,21 +634,32 @@ export default function ForumPostPage() {
             </div>
           ) : (
             <>
-              {comments.map((comment) => (
-                <div key={comment.id} className="bg-zinc-900/50 backdrop-blur-sm rounded-lg border border-zinc-800 p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <User className="h-4 w-4 text-zinc-400" />
-                      <span className="font-medium text-white">{comment.username}</span>
+              {comments.map((comment, index) => {
+                const isNew = index === 0 && new Date(comment.created_at) > new Date(Date.now() - 5000);
+                return (
+                  <div 
+                    key={comment.id} 
+                    className={`bg-zinc-900/50 backdrop-blur-sm rounded-lg border border-zinc-800 p-4 transition-all duration-300 ${
+                      isNew ? 'animate-pulse border-blue-500/30 bg-blue-500/5' : ''
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <User className="h-4 w-4 text-zinc-400" />
+                        <span className="font-medium text-white">{comment.username}</span>
+                        {isNew && (
+                          <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded-full">New</span>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-1 text-zinc-500">
+                        <Clock className="h-3 w-3" />
+                        <span className="text-xs">{formatDate(comment.created_at)}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-1 text-zinc-500">
-                      <Clock className="h-3 w-3" />
-                      <span className="text-xs">{formatDate(comment.created_at)}</span>
-                    </div>
+                    <p className="text-zinc-300">{comment.comment}</p>
                   </div>
-                  <p className="text-zinc-300">{comment.comment}</p>
-                </div>
-              ))}
+                );
+              })}
 
               {/* Pagination */}
               {pagination && pagination.total_pages > 1 && (

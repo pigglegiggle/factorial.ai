@@ -47,17 +47,28 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, postId: num
       return res.status(404).json({ error: 'Post not found' });
     }
 
-    // Create comment
+    // Create comment and return full comment data
     const commentResult = await sql`
       INSERT INTO forum_comments (post_id, user_id, comment)
       VALUES (${postId}, ${user.id}, ${comment.trim()})
       RETURNING id, created_at
     `;
 
+    // Get the complete comment data with username
+    const fullComment = await sql`
+      SELECT 
+        fc.id,
+        fc.comment,
+        fc.created_at,
+        u.username
+      FROM forum_comments fc
+      JOIN users u ON fc.user_id = u.id
+      WHERE fc.id = ${commentResult[0].id}
+    `;
+
     return res.status(200).json({
-      id: commentResult[0].id,
       message: 'Comment added successfully',
-      created_at: commentResult[0].created_at,
+      comment: fullComment[0]
     });
 
   } catch (error: any) {
