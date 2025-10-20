@@ -36,9 +36,16 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponse) => {
       path: '/api/socketio',
       addTrailingSlash: false,
       cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-      }
+        origin: process.env.NODE_ENV === 'production' 
+          ? ['https://factorial-ai.sinpw.site', 'https://www.factorial-ai.sinpw.site']
+          : "*",
+        methods: ["GET", "POST"],
+        credentials: true
+      },
+      transports: ['polling', 'websocket'],
+      allowEIO3: true,
+      pingTimeout: 60000,
+      pingInterval: 25000
     });
     
     socket.server.io = io;
@@ -120,7 +127,7 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponse) => {
       }) => {
         const { postId, comment, userId } = data;
         
-        // Broadcast new comment to all users in the post (except sender)
+        // Broadcast new comment to all users in the post EXCEPT the sender
         socket.to(`post-${postId}`).emit('comment-added', comment);
         
         // Remove user from typing list
@@ -137,6 +144,7 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponse) => {
         upvotes: number;
         downvotes: number;
       }) => {
+        // Broadcast vote update to all users in the post EXCEPT the sender
         socket.to(`post-${data.postId}`).emit('votes-updated', {
           upvotes: data.upvotes,
           downvotes: data.downvotes

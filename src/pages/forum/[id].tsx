@@ -62,13 +62,15 @@ export default function ForumPostPage() {
   const { 
     socket, 
     isConnected, 
+    connectionMode,
     typingUsers, 
     joinPost, 
     leavePost, 
     startTyping, 
     stopTyping, 
     emitNewComment,
-    emitVoteUpdate 
+    emitVoteUpdate,
+    setRefreshCallbacks
   } = useSocket();
   
   const [post, setPost] = useState<ForumPost | null>(null);
@@ -92,24 +94,37 @@ export default function ForumPostPage() {
       fetchComments();
       
       // Join the post room for real-time updates
-      if (user && socket && isConnected) {
+      if (user && (socket || connectionMode === 'polling')) {
         joinPost(parseInt(id as string));
+        
+        // Set up refresh callbacks for polling mode
+        setRefreshCallbacks({
+          comments: fetchComments,
+          votes: fetchPost
+        });
       }
     }
-  }, [id, currentPage, user, socket, isConnected]);
+  }, [id, currentPage, user, socket, connectionMode]);
 
   // Socket event listeners
   useEffect(() => {
     if (!socket) return;
 
-    // Listen for new comments
+    // Listen for new comments (from other users only due to socket.to())
     const handleNewComment = (comment: Comment) => {
-      setComments(prev => [comment, ...prev]);
-      // Update pagination count
-      setPagination(prev => prev ? {
-        ...prev,
-        total_comments: prev.total_comments + 1
-      } : null);
+      // Check if comment already exists to prevent duplicates
+      setComments(prev => {
+        const commentExists = prev.some(c => c.id === comment.id);
+        if (!commentExists) {
+          // Update pagination count only if it's a new comment
+          setPagination(prevPag => prevPag ? {
+            ...prevPag,
+            total_comments: prevPag.total_comments + 1
+          } : null);
+          return [comment, ...prev];
+        }
+        return prev;
+      });
     };
 
     // Listen for vote updates
@@ -424,7 +439,10 @@ export default function ForumPostPage() {
               {isConnected ? (
                 <div className="flex items-center space-x-1 text-green-400">
                   <Wifi className="h-4 w-4" />
-                  <span className="text-xs">Live</span>
+                  <span className="text-xs">
+                    {connectionMode === 'websocket' ? 'Live (WebSocket)' : 
+                     connectionMode === 'polling' ? 'Live (Polling)' : 'Live'}
+                  </span>
                 </div>
               ) : (
                 <div className="flex items-center space-x-1 text-red-400">
@@ -570,8 +588,8 @@ export default function ForumPostPage() {
                 disabled={isSubmittingComment}
               />
               
-              {/* Typing indicator */}
-              {typingUsers.length > 0 && (
+              {/* Typing indicator - only show in WebSocket mode */}
+              {connectionMode === 'websocket' && typingUsers.length > 0 && (
                 <div className="text-sm text-blue-400 animate-pulse">
                   {typingUsers.length === 1 
                     ? `${typingUsers[0].username} is typing...`
@@ -579,6 +597,13 @@ export default function ForumPostPage() {
                     ? `${typingUsers[0].username} and ${typingUsers[1].username} are typing...`
                     : `${typingUsers[0].username} and ${typingUsers.length - 1} others are typing...`
                   }
+                </div>
+              )}
+              
+              {/* Polling mode notice */}
+              {connectionMode === 'polling' && (
+                <div className="text-sm text-yellow-400">
+                  Real-time mode (updates every 3 seconds)
                 </div>
               )}
               <div className="flex justify-between items-center">
