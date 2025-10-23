@@ -78,6 +78,19 @@ CREATE TABLE forum_votes (
     UNIQUE(user_id, post_id) -- One vote per user per post
 );
 
+-- Forum feedback table (for community feedback on forum posts)
+CREATE TABLE forum_feedback (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    forum_post_id INTEGER REFERENCES forum_posts(id) ON DELETE CASCADE,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    comment TEXT,
+    feedback_type VARCHAR(20) NOT NULL CHECK (feedback_type IN ('analysis_quality', 'post_helpfulness', 'community_value')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, forum_post_id) -- One feedback per user per forum post
+);
+
 -- Indexes for better performance
 CREATE INDEX idx_news_checks_user_id ON news_checks(user_id);
 CREATE INDEX idx_news_checks_created_at ON news_checks(created_at);
@@ -86,6 +99,8 @@ CREATE INDEX idx_forum_posts_created_at ON forum_posts(created_at);
 CREATE INDEX idx_forum_posts_user_id ON forum_posts(user_id);
 CREATE INDEX idx_forum_comments_post_id ON forum_comments(post_id);
 CREATE INDEX idx_forum_votes_post_id ON forum_votes(post_id);
+CREATE INDEX idx_forum_feedback_forum_post_id ON forum_feedback(forum_post_id);
+CREATE INDEX idx_forum_feedback_user_id ON forum_feedback(user_id);
 
 -- Insert some default tags
 INSERT INTO tags (name) VALUES 

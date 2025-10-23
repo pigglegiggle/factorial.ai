@@ -2,9 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { verifyToken } from '@/lib/auth';
 import { sql } from '@/lib/database';
 import { analyzeNewsWithGemini } from '@/lib/gemini';
-import { ModelTrainer } from '@/lib/model-trainer';
-
-const modelTrainer = new ModelTrainer();
+import { improvedModelTrainer } from '@/lib/improved-model-trainer';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -40,18 +38,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Call Gemini API
     const geminiResult = await analyzeNewsWithGemini(contentToAnalyze, isUrl);
 
-    // Get or create tags
+    // Get or create tags (from categories)
     const tagResults = await Promise.all(
-      geminiResult.tags.map(async (tagName: string) => {
+      (geminiResult.categories || []).map(async (categoryName: string) => {
         // Try to get existing tag
         let tagResult = await sql`
-          SELECT id FROM tags WHERE name = ${tagName.toLowerCase()}
+          SELECT id FROM tags WHERE name = ${categoryName.toLowerCase()}
         `;
 
         if (tagResult.length === 0) {
           // Create new tag
           tagResult = await sql`
-            INSERT INTO tags (name) VALUES (${tagName.toLowerCase()})
+            INSERT INTO tags (name) VALUES (${categoryName.toLowerCase()})
             RETURNING id
           `;
         }
@@ -83,13 +81,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const newsCheckId = newsCheckResult[0].id;
 
-    // Log this analysis for machine learning improvements
-    await modelTrainer.logAnalysisForLearning(contentToAnalyze, geminiResult, user.id);
+    // Enhanced analysis with improved model trainer (no logging needed as it's handled internally)
+    const enhancedResult = await improvedModelTrainer.enhanceAnalysis(
+      contentToAnalyze, 
+      geminiResult, 
+      newsCheckId, 
+      user.id
+    );
 
     // Associate tags with news check
     if (tagResults.length > 0) {
       await Promise.all(
-        tagResults.map(tagId =>
+        tagResults.map((tagId: number) =>
           sql`
             INSERT INTO news_tags (news_check_id, tag_id)
             VALUES (${newsCheckId}, ${tagId})
@@ -101,9 +104,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({
       id: newsCheckId,
-      result: geminiResult,
+      result: enhancedResult,
       created_at: newsCheckResult[0].created_at,
-      message: 'News analysis completed successfully',
+      message: 'News analysis completed successfully with enhanced learning',
     });
 
   } catch (error: any) {

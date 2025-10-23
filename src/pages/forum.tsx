@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/components/AuthContext';
+import ForumFeedbackForm from '@/components/ForumFeedbackForm';
 import { MessageSquare, ThumbsUp, ThumbsDown, Clock, User, Tag, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
@@ -258,62 +259,76 @@ export default function ForumPage() {
 
   return (
     <div className="min-h-screen bg-[#111114] text-white">
-      {/* Header Section */}
-      <div className="bg-gradient-to-r from-zinc-900/50 to-zinc-800/30 border-b border-zinc-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-white mb-4 flex items-center justify-center space-x-3">
-              <MessageSquare className="h-10 w-10 text-blue-400" />
-              <span>Factorial.ai Forum</span>
-            </h1>
-            <p className="text-xl text-zinc-400 max-w-2xl mx-auto">
-              Discuss news analysis results, share insights, and learn from the community.
-            </p>
+      {/* Modern Header */}
+      <div className="border-b border-zinc-800/50 bg-gradient-to-b from-zinc-900/20 to-transparent">
+        <div className="max-w-7xl mx-auto px-6 py-16">
+          <div className="text-center space-y-6">
+            <div className="flex items-center justify-center space-x-4">
+              <div className="p-4 bg-gradient-to-br from-green-500/20 to-blue-500/20 rounded-2xl border border-green-500/20">
+                <MessageSquare className="h-12 w-12 text-green-400" />
+              </div>
+              <div className="text-left">
+                <h1 className="text-5xl font-bold bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent">
+                  Community Forum
+                </h1>
+                <p className="text-lg text-zinc-400 mt-2">
+                  Share insights, discuss analysis results, and learn together
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-6 py-12">
         {!user && (
-          <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-6 mb-8 max-w-4xl mx-auto">
-            <div className="text-center">
-              <p className="text-blue-400 text-lg">
-                <Link href="/auth/login" className="text-blue-300 underline font-medium">Log in</Link> to participate in discussions and vote on posts.
+          <div className="bg-zinc-800/50 backdrop-blur-sm rounded-2xl border border-blue-500/20 p-8 mb-12 shadow-xl">
+            <div className="text-center space-y-4">
+              <div className="p-4 bg-blue-500/20 rounded-2xl w-fit mx-auto">
+                <User className="h-8 w-8 text-blue-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white">Join the Discussion</h3>
+              <p className="text-zinc-400 leading-relaxed">
+                <Link href="/auth/login" className="text-blue-400 hover:text-blue-300 font-semibold transition-colors">Log in</Link> to participate in discussions, vote on posts, and share your insights with the community.
               </p>
             </div>
           </div>
         )}
 
-        {/* Filters */}
-        <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl border border-zinc-800 p-6 mb-8 max-w-4xl mx-auto">
-          <h2 className="text-lg font-semibold text-white mb-4">Filter & Sort</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Enhanced Filters */}
+        <div className="bg-zinc-800/50 backdrop-blur-sm rounded-2xl border border-zinc-700 p-8 mb-12 shadow-xl">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="p-2 bg-purple-500/20 rounded-lg">
+              <Tag className="h-5 w-5 text-purple-400" />
+            </div>
+            <h2 className="text-xl font-bold text-white">Filter & Sort Posts</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-2">Sort by</label>
+              <label className="block text-sm font-semibold text-zinc-300 mb-3">Sort by</label>
               <select
                 value={sortBy}
                 onChange={(e) => {
                   setSortBy(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full p-3 bg-zinc-800/50 border border-zinc-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white"
+                className="w-full p-4 bg-zinc-700/50 border border-zinc-600 rounded-xl text-white placeholder-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-colors text-lg"
               >
                 <option value="recent">Most Recent</option>
                 <option value="popular">Most Popular</option>
-                <option value="controversial">Most Controversial</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-2">Filter by Tag</label>
+              <label className="block text-sm font-semibold text-zinc-300 mb-3">Filter by Tag</label>
               <select
                 value={selectedTag}
                 onChange={(e) => {
                   setSelectedTag(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full p-3 bg-zinc-800/50 border border-zinc-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white"
+                className="w-full p-4 bg-zinc-700/50 border border-zinc-600 rounded-xl text-white placeholder-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-colors text-lg"
               >
                 <option value="">All Tags</option>
                 {availableTags.map((tag) => (
@@ -327,149 +342,190 @@ export default function ForumPage() {
         </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 mb-8 max-w-4xl mx-auto">
-            <p className="text-red-400 text-center">{error}</p>
+          <div className="bg-zinc-800/50 border border-red-500/20 rounded-2xl p-8 mb-12 shadow-xl">
+            <div className="text-center space-y-3">
+              <div className="p-3 bg-red-500/20 rounded-2xl w-fit mx-auto">
+                <MessageSquare className="h-6 w-6 text-red-400" />
+              </div>
+              <p className="text-red-400 font-medium">{error}</p>
+            </div>
           </div>
         )}
 
         {isLoading ? (
-          <div className="flex justify-center items-center py-20 max-w-4xl mx-auto">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400"></div>
-            <span className="ml-4 text-zinc-300 text-lg">Loading posts...</span>
+          <div className="flex justify-center items-center py-32">
+            <div className="text-center space-y-4">
+              <div className="animate-spin rounded-full h-16 w-16 border-2 border-green-500/20 border-t-green-400 mx-auto"></div>
+              <p className="text-zinc-400 text-lg">Loading community discussions...</p>
+            </div>
           </div>
         ) : posts.length === 0 ? (
-          <div className="text-center py-20 max-w-4xl mx-auto">
-            <MessageSquare className="h-20 w-20 mx-auto text-zinc-600 mb-6" />
-            <h2 className="text-2xl font-semibold text-zinc-300 mb-4">No posts found</h2>
-            <p className="text-zinc-500 text-lg">
-              Be the first to share a news analysis and start a discussion!
-            </p>
+          <div className="text-center py-20">
+            <div className="max-w-2xl mx-auto space-y-6">
+              <div className="p-8 bg-zinc-800/30 rounded-2xl border border-zinc-700">
+                <MessageSquare className="h-16 w-16 text-green-400 mx-auto mb-6" />
+                <h3 className="text-2xl font-bold text-white mb-4">Start the Conversation</h3>
+                <p className="text-zinc-400 text-lg leading-relaxed">
+                  No discussions yet! Be the first to share a news analysis and engage with the community.
+                </p>
+              </div>
+            </div>
           </div>
         ) : (
           <>
-            <div className="space-y-6 max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 gap-8">
               {posts.map((post) => (
-                <div key={post.id} className="bg-zinc-900/50 backdrop-blur-sm rounded-xl border border-zinc-800 p-6 hover:border-zinc-700 transition-colors">
-                {/* Post header */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-2">
-                    <User className="h-5 w-5 text-zinc-400" />
-                    <span className="font-medium text-white">{post.username}</span>
-                    <span className="text-zinc-500">•</span>
-                    <div className="flex items-center space-x-1 text-zinc-500">
-                      <Clock className="h-4 w-4" />
-                      <span className="text-sm">{formatDate(post.created_at)}</span>
+                <article
+                  key={post.id}
+                  className="bg-zinc-800/50 backdrop-blur-sm rounded-2xl border border-zinc-700 p-8 shadow-xl hover:shadow-2xl transition-all duration-300 hover:border-zinc-600"
+                >
+                  {/* Post header */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-blue-500/20 rounded-xl">
+                        <User className="h-5 w-5 text-blue-400" />
+                      </div>
+                      <div>
+                        <span className="font-semibold text-white text-lg">{post.username}</span>
+                        <div className="flex items-center space-x-2 text-zinc-400 text-sm mt-1">
+                          <Clock className="h-3 w-3" />
+                          <span>{formatDate(post.created_at)}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* News analysis summary */}
-                <div className="bg-zinc-800/50 rounded-lg p-4 mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      post.is_fake ? 'text-red-400 bg-red-500/10 border border-red-500/20' : 'text-green-400 bg-green-500/10 border border-green-500/20'
-                    }`}>
-                      {post.is_fake ? 'Likely Fake' : 'Likely Real'} ({post.confidence}% confidence)
-                    </span>
-                  </div>
-                  
-                  <p className="text-sm text-zinc-300 mb-2">
-                    <strong>News:</strong> {truncateText(post.news_content, 150)}
-                  </p>
-                  
-                  {post.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {post.tags.map((tag, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center space-x-1 bg-blue-500/20 text-blue-300 px-2 py-1 rounded text-xs border border-blue-500/30"
-                        >
-                          <Tag className="h-3 w-3" />
-                          <span>{tag}</span>
-                        </span>
-                      ))}
+                  {/* Enhanced News analysis summary */}
+                  <div className="bg-zinc-700/30 rounded-2xl p-6 mb-6 border border-zinc-600/30">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className={`px-4 py-2 rounded-xl text-sm font-semibold border-2 ${
+                        post.is_fake 
+                          ? 'text-red-300 bg-red-500/20 border-red-500/30' 
+                          : 'text-green-300 bg-green-500/20 border-green-500/30'
+                      }`}>
+                        {post.is_fake ? 'Likely Fake' : 'Likely Real'} ({post.confidence}% confidence)
+                      </div>
                     </div>
-                  )}
-                </div>
+                    
+                    <div className="space-y-3">
+                      <div className="bg-zinc-800/50 rounded-xl p-4">
+                        <h4 className="text-sm font-semibold text-zinc-300 mb-2">Analyzed Content:</h4>
+                        <p className="text-zinc-200 leading-relaxed">
+                          {truncateText(post.news_content, 200)}
+                        </p>
+                      </div>
+                      
+                      {post.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {post.tags.map((tag, index) => (
+                            <span
+                              key={index}
+                              className="inline-flex items-center space-x-2 bg-blue-500/20 text-blue-200 px-3 py-1 rounded-lg text-sm font-medium border border-blue-500/30"
+                            >
+                              <Tag className="h-3 w-3" />
+                              <span>{tag}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-                {/* Post content */}
-                <p className="text-zinc-300 leading-relaxed mb-4">{post.content}</p>
+                  {/* Enhanced Post content */}
+                  <div className="mb-6">
+                    <h4 className="text-sm font-semibold text-zinc-300 mb-3">Community Discussion:</h4>
+                    <p className="text-zinc-200 leading-relaxed text-lg bg-zinc-700/20 rounded-xl p-4 border border-zinc-600/20">
+                      {post.content}
+                    </p>
+                  </div>
 
-                {/* Voting and actions */}
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={() => handleVote(post.id, 'upvote')}
-                    disabled={!user || votingStates[post.id]}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 ${
-                      userVotes[post.id] === 'upvote'
-                        ? 'bg-green-500/20 text-green-300 border border-green-500/30'
-                        : 'text-green-400 hover:text-green-300 hover:bg-green-500/10'
-                    } disabled:text-zinc-600 disabled:cursor-not-allowed disabled:hover:bg-transparent ${
-                      votingStates[post.id] ? 'opacity-50' : ''
-                    }`}
-                  >
-                    {votingStates[post.id] && userVotes[post.id] !== 'downvote' ? (
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-400"></div>
-                    ) : (
-                      <ThumbsUp className={`h-5 w-5 ${userVotes[post.id] === 'upvote' ? 'fill-current' : ''}`} />
-                    )}
-                    <span className="font-medium">{post.upvotes}</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => handleVote(post.id, 'downvote')}
-                    disabled={!user || votingStates[post.id]}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 ${
-                      userVotes[post.id] === 'downvote'
-                        ? 'bg-red-500/20 text-red-300 border border-red-500/30'
-                        : 'text-red-400 hover:text-red-300 hover:bg-red-500/10'
-                    } disabled:text-zinc-600 disabled:cursor-not-allowed disabled:hover:bg-transparent ${
-                      votingStates[post.id] ? 'opacity-50' : ''
-                    }`}
-                  >
-                    {votingStates[post.id] && userVotes[post.id] !== 'upvote' ? (
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-red-400"></div>
-                    ) : (
-                      <ThumbsDown className={`h-5 w-5 ${userVotes[post.id] === 'downvote' ? 'fill-current' : ''}`} />
-                    )}
-                    <span className="font-medium">{post.downvotes}</span>
-                  </button>
+                  {/* Enhanced Voting and actions */}
+                  <div className="flex items-center justify-between pt-4 border-t border-zinc-600/30 mb-6">
+                    <div className="flex items-center space-x-4">
+                      <button
+                        onClick={() => handleVote(post.id, 'upvote')}
+                        disabled={!user || votingStates[post.id]}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-xl font-semibold transition-all duration-200 ${
+                          userVotes[post.id] === 'upvote'
+                            ? 'bg-green-500/20 text-green-300 border-2 border-green-500/40 shadow-green-500/20 shadow-lg'
+                            : 'text-green-400 hover:text-green-300 hover:bg-green-500/10 border-2 border-transparent hover:border-green-500/20'
+                        } disabled:text-zinc-600 disabled:cursor-not-allowed disabled:hover:bg-transparent ${
+                          votingStates[post.id] ? 'opacity-50' : ''
+                        }`}
+                      >
+                        {votingStates[post.id] && userVotes[post.id] !== 'downvote' ? (
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-400"></div>
+                        ) : (
+                          <ThumbsUp className={`h-5 w-5 ${userVotes[post.id] === 'upvote' ? 'fill-current' : ''}`} />
+                        )}
+                        <span>{post.upvotes}</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => handleVote(post.id, 'downvote')}
+                        disabled={!user || votingStates[post.id]}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-xl font-semibold transition-all duration-200 ${
+                          userVotes[post.id] === 'downvote'
+                            ? 'bg-red-500/20 text-red-300 border-2 border-red-500/40 shadow-red-500/20 shadow-lg'
+                            : 'text-red-400 hover:text-red-300 hover:bg-red-500/10 border-2 border-transparent hover:border-red-500/20'
+                        } disabled:text-zinc-600 disabled:cursor-not-allowed disabled:hover:bg-transparent ${
+                          votingStates[post.id] ? 'opacity-50' : ''
+                        }`}
+                      >
+                        {votingStates[post.id] && userVotes[post.id] !== 'upvote' ? (
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-red-400"></div>
+                        ) : (
+                          <ThumbsDown className={`h-5 w-5 ${userVotes[post.id] === 'downvote' ? 'fill-current' : ''}`} />
+                        )}
+                        <span>{post.downvotes}</span>
+                      </button>
+                    </div>
 
-                  <Link
-                    href={`/forum/${post.id}`}
-                    className="flex items-center space-x-1 text-blue-400 hover:text-blue-300 transition-colors"
-                  >
-                    <MessageSquare className="h-5 w-5" />
-                    <span>Comments</span>
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
+                    <Link
+                      href={`/forum/${post.id}`}
+                      className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-semibold transition-all hover:scale-105 shadow-lg"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      <span>View Discussion</span>
+                    </Link>
+                  </div>
 
-            {/* Pagination */}
+                  {/* Community Feedback Section */}
+                  <div className="border-t border-zinc-600/30 pt-6">
+                    <ForumFeedbackForm forumPostId={post.id} />
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            {/* Enhanced Pagination */}
             {pagination && pagination.total_pages > 1 && (
-              <div className="flex justify-center items-center space-x-6 mt-12 pb-8">
+              <div className="flex justify-center items-center space-x-8 mt-16 pb-12">
                 <button
                   onClick={() => setCurrentPage(currentPage - 1)}
                   disabled={!pagination.has_previous}
-                  className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-zinc-600 disabled:cursor-not-allowed transition-colors font-medium"
+                  className="flex items-center space-x-3 px-8 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white rounded-2xl font-semibold transition-all hover:scale-105 shadow-lg disabled:hover:scale-100"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-5 w-5" />
                   <span>Previous</span>
                 </button>
                 
-                <span className="text-zinc-300 bg-zinc-900/50 px-4 py-2 rounded-lg border border-zinc-800">
-                  Page {pagination.current_page} of {pagination.total_pages}
-                </span>
+                <div className="bg-zinc-800/50 border border-zinc-700 px-6 py-4 rounded-2xl shadow-xl">
+                  <span className="text-zinc-200 font-semibold">
+                    Page {pagination.current_page} of {pagination.total_pages}
+                  </span>
+                  <p className="text-xs text-zinc-400 mt-1">
+                    Total: {pagination.total_posts} posts
+                  </p>
+                </div>
                 
                 <button
                   onClick={() => setCurrentPage(currentPage + 1)}
                   disabled={!pagination.has_next}
-                  className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-zinc-600 disabled:cursor-not-allowed transition-colors font-medium"
+                  className="flex items-center space-x-3 px-8 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white rounded-2xl font-semibold transition-all hover:scale-105 shadow-lg disabled:hover:scale-100"
                 >
                   <span>Next</span>
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-5 w-5" />
                 </button>
               </div>
             )}

@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { verifyToken } from '@/lib/auth';
-import { ModelTrainer } from '@/lib/model-trainer';
+import { improvedModelTrainer } from '@/lib/improved-model-trainer';
 import { FeedbackAnalyzer } from '@/lib/feedback-analyzer';
 
-const modelTrainer = new ModelTrainer();
+const modelTrainer = improvedModelTrainer;
 const feedbackAnalyzer = new FeedbackAnalyzer();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -27,35 +27,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Get comprehensive model training insights
-    const [accuracyMetrics, learningInsights, feedbackStats, feedbackPatterns] = await Promise.all([
-      modelTrainer.calculateAccuracyMetrics(),
-      modelTrainer.getLearningInsights(),
-      feedbackAnalyzer.getFeedbackStats(),
-      feedbackAnalyzer.analyzeFeedbackPatterns()
-    ]);
+    const learningInsights = await modelTrainer.getLearningInsights();
 
     const response = {
       model_performance: {
-        accuracy: accuracyMetrics.accuracy,
-        total_evaluations: accuracyMetrics.totalAnalyses,
-        correct_predictions: accuracyMetrics.correctPredictions,
-        overconfident_cases: accuracyMetrics.overconfidentCases,
-        underconfident_cases: accuracyMetrics.underconfidentCases
+        performance_status: learningInsights.modelPerformance,
+        agreement_rate: learningInsights.agreementRate,
+        total_feedback: learningInsights.totalFeedback,
+        accuracy: learningInsights.agreementRate, // Using agreement rate as accuracy proxy
+        total_evaluations: learningInsights.totalFeedback,
+        correct_predictions: Math.round((learningInsights.agreementRate / 100) * learningInsights.totalFeedback),
+        overconfident_cases: learningInsights.keyIssues.filter(issue => issue.includes('disagreement')).length,
+        underconfident_cases: 0 // Will implement if needed
       },
       feedback_analysis: {
-        average_rating: feedbackStats.averageRating,
-        total_feedback: feedbackStats.totalFeedback,
-        trend: feedbackStats.recentTrend,
-        common_issues: feedbackPatterns.commonMistakes,
-        improvement_suggestions: feedbackPatterns.suggestionPrompts
+        key_issues: learningInsights.keyIssues,
+        recommended_actions: learningInsights.recommendedActions,
+        total_feedback: learningInsights.totalFeedback,
+        performance_level: learningInsights.modelPerformance,
+        agreement_rate: learningInsights.agreementRate
       },
       learning_insights: learningInsights,
       training_status: {
-        feedback_enhanced_analyses: feedbackPatterns.suggestionPrompts.length > 0,
-        confidence_calibration_active: accuracyMetrics.totalAnalyses >= 10,
-        ready_for_improvement: feedbackStats.totalFeedback >= 20
+        feedback_enhanced_analyses: learningInsights.totalFeedback > 0,
+        confidence_calibration_active: learningInsights.totalFeedback >= 10,
+        ready_for_improvement: learningInsights.totalFeedback >= 20
       },
-      recommendations: generateRecommendations(accuracyMetrics, feedbackStats, learningInsights)
+      recommendations: generateRecommendations(learningInsights)
     };
 
     return res.status(200).json(response);
@@ -66,31 +64,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-function generateRecommendations(
-  accuracyMetrics: any,
-  feedbackStats: any,
-  learningInsights: any
-): string[] {
+function generateRecommendations(learningInsights: any): string[] {
   const recommendations: string[] = [];
 
-  if (feedbackStats.totalFeedback < 20) {
+  if (learningInsights.totalFeedback < 20) {
     recommendations.push('Collect more user feedback to enable advanced training features');
   }
 
-  if (accuracyMetrics.accuracy < 70 && accuracyMetrics.totalAnalyses >= 10) {
-    recommendations.push('Model accuracy is below optimal - consider prompt refinements');
+  if (learningInsights.agreementRate < 70 && learningInsights.totalFeedback >= 10) {
+    recommendations.push('User agreement is below optimal - review analysis approach');
   }
 
-  if (feedbackStats.recentTrend === 'declining') {
-    recommendations.push('Recent feedback trend is negative - investigate common issues');
+  if (learningInsights.keyIssues.length > 0) {
+    recommendations.push('Address identified issues: ' + learningInsights.keyIssues.join(', '));
   }
 
-  if (accuracyMetrics.overconfidentCases > accuracyMetrics.totalAnalyses * 0.15) {
-    recommendations.push('Reduce overconfidence by implementing stricter confidence thresholds');
+  if (learningInsights.recommendedActions.length > 0) {
+    recommendations.push(...learningInsights.recommendedActions);
   }
 
-  if (learningInsights.keyWeaknesses.length === 0 && accuracyMetrics.accuracy > 80) {
-    recommendations.push('Model performing well - maintain current training approach');
+  if (learningInsights.modelPerformance === 'Excellent' && learningInsights.agreementRate > 85) {
+    recommendations.push('Model performing excellently - maintain current approach');
   }
 
   if (recommendations.length === 0) {

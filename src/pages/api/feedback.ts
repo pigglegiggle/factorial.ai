@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { verifyToken } from '@/lib/auth';
 import { sql } from '@/lib/database';
 import { logFeedbackToFile } from '@/lib/feedback-logger';
+import { improvedModelTrainer } from '@/lib/improved-model-trainer';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
@@ -78,6 +79,26 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     } catch (logError) {
       console.error('Failed to log feedback to file:', logError);
       // Continue execution as file logging is optional
+    }
+
+    // Process feedback with improved model trainer for learning
+    try {
+      const contentToAnalyze = newsCheck[0].input_text || newsCheck[0].input_url;
+      const analysisResult = newsCheck[0].result_json;
+      
+      if (contentToAnalyze && analysisResult && comment) {
+        await improvedModelTrainer.enhanceAnalysis(
+          contentToAnalyze,
+          analysisResult,
+          news_check_id,
+          user.id,
+          { rating, comment }
+        );
+        console.log('✅ Feedback processed by improved model trainer');
+      }
+    } catch (modelError) {
+      console.error('Failed to process feedback with model trainer:', modelError);
+      // Continue execution as model training is supplementary
     }
 
     return res.status(200).json({

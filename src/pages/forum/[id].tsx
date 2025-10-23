@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/components/AuthContext';
+import ForumFeedbackForm from '@/components/ForumFeedbackForm';
 import { 
   MessageSquare, 
   ThumbsUp, 
@@ -397,10 +398,12 @@ export default function ForumPostPage() {
   if (isLoading && !post) {
     return (
       <div className="min-h-screen bg-[#111114] text-white">
-        <div className="max-w-4xl mx-auto p-6">
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
-            <span className="ml-2 text-zinc-300">Loading post...</span>
+        <div className="max-w-7xl mx-auto px-6 py-32">
+          <div className="flex justify-center items-center">
+            <div className="text-center space-y-4">
+              <div className="animate-spin rounded-full h-16 w-16 border-2 border-green-500/20 border-t-green-400 mx-auto"></div>
+              <p className="text-zinc-400 text-lg">Loading discussion...</p>
+            </div>
           </div>
         </div>
       </div>
@@ -410,12 +413,20 @@ export default function ForumPostPage() {
   if (!post) {
     return (
       <div className="min-h-screen bg-[#111114] text-white">
-        <div className="max-w-4xl mx-auto p-6">
-          <div className="text-center py-12">
-            <h2 className="text-xl font-semibold text-zinc-300 mb-2">Post not found</h2>
-            <Link href="/forum" className="text-blue-400 hover:text-blue-300 underline">
-              ← Back to Forum
-            </Link>
+        <div className="max-w-7xl mx-auto px-6 py-20">
+          <div className="text-center space-y-6">
+            <div className="p-8 bg-zinc-800/30 rounded-2xl border border-zinc-700 max-w-2xl mx-auto">
+              <MessageSquare className="h-16 w-16 text-zinc-600 mx-auto mb-6" />
+              <h2 className="text-2xl font-bold text-zinc-300 mb-4">Discussion Not Found</h2>
+              <p className="text-zinc-500 mb-6">This discussion may have been removed or doesn't exist.</p>
+              <Link 
+                href="/forum" 
+                className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Back to Forum</span>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -424,144 +435,195 @@ export default function ForumPostPage() {
 
   return (
     <div className="min-h-screen bg-[#111114] text-white">
-      <div className="max-w-4xl mx-auto p-6">
-        {/* Back button and connection status */}
-        <div className="mb-6 flex justify-between items-center">
-          <Link 
-            href="/forum"
-            className="flex items-center space-x-2 text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back to Forum</span>
-          </Link>
-          
-          {user && (
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-1 text-blue-400">
-                <Wifi className="h-4 w-4" />
-                <span className="text-xs">Live (Polling)</span>
+      {/* Modern Header */}
+      <div className="border-b border-zinc-800/50 bg-gradient-to-b from-zinc-900/20 to-transparent">
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="flex items-center justify-between">
+            <Link 
+              href="/forum"
+              className="flex items-center space-x-3 text-blue-400 hover:text-blue-300 transition-colors group"
+            >
+              <div className="p-2 bg-blue-500/20 rounded-xl group-hover:bg-blue-500/30 transition-colors">
+                <ArrowLeft className="h-5 w-5" />
               </div>
-            </div>
-          )}
-        </div>
-
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-6">
-            <p className="text-red-400">{error}</p>
-          </div>
-        )}
-
-        {/* Post */}
-        <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl border border-zinc-800 p-6 mb-8">
-          {/* Post header */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-2">
-              <User className="h-5 w-5 text-zinc-400" />
-              <span className="font-medium text-white">{post.username}</span>
-              <span className="text-zinc-500">•</span>
-              <div className="flex items-center space-x-1 text-zinc-500">
-                <Clock className="h-4 w-4" />
-                <span className="text-sm">{formatDate(post.created_at)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* News analysis summary */}
-          <div className="bg-zinc-800/50 rounded-lg p-4 mb-4">
-            <div className="flex items-center space-x-3 mb-4">
-              {getResultIcon(post.is_fake)}
-              <div>
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  post.is_fake ? 'text-red-400 bg-red-500/10 border border-red-500/20' : 'text-green-400 bg-green-500/10 border border-green-500/20'
-                }`}>
-                  {post.is_fake ? 'Likely Fake' : 'Likely Real'} ({post.confidence}% confidence)
-                </span>
-              </div>
-            </div>
+              <span className="font-semibold text-lg">Back to Forum</span>
+            </Link>
             
-            <div className="mb-4">
-              <h4 className="font-medium text-zinc-300 mb-2">News Content:</h4>
-              <p className="text-zinc-300 bg-zinc-900/50 p-3 rounded border border-zinc-700">{post.news_content}</p>
-            </div>
-
-            <div className="mb-4">
-              <h4 className="font-medium text-zinc-300 mb-2">AI Analysis:</h4>
-              <p className="text-zinc-300">{post.result_json.explanation}</p>
-            </div>
-          
-            {post.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {post.tags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center space-x-1 bg-blue-500/20 text-blue-300 px-2 py-1 rounded text-xs border border-blue-500/30"
-                  >
-                    <Tag className="h-3 w-3" />
-                    <span>{tag}</span>
-                  </span>
-                ))}
+            {user && (
+              <div className="flex items-center space-x-3 bg-zinc-800/50 px-4 py-2 rounded-xl border border-zinc-700">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <div className="flex items-center space-x-2 text-green-400">
+                  <Wifi className="h-4 w-4" />
+                  <span className="text-sm font-medium">Live Updates</span>
+                </div>
               </div>
             )}
           </div>
+        </div>
+      </div>
 
-          {/* Post content */}
-          <div className="mb-4">
-            <h4 className="font-medium text-zinc-300 mb-2">Discussion:</h4>
-            <p className="text-white leading-relaxed">{post.content}</p>
-          </div>
+      <div className="max-w-7xl mx-auto px-6 py-12">{/* Content will continue below */}
 
-          {/* Voting */}
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => handleVote('upvote')}
-              disabled={!user || isVoting}
-              className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 ${
-                userVote === 'upvote'
-                  ? 'bg-green-500/20 text-green-300 border border-green-500/30'
-                  : 'text-green-400 hover:text-green-300 hover:bg-green-500/10'
-              } disabled:text-zinc-600 disabled:cursor-not-allowed disabled:hover:bg-transparent ${
-                isVoting ? 'opacity-50' : ''
-              }`}
-            >
-              {isVoting && userVote !== 'downvote' ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-400"></div>
-              ) : (
-                <ThumbsUp className={`h-5 w-5 ${userVote === 'upvote' ? 'fill-current' : ''}`} />
-              )}
-              <span className="font-medium">{post.upvotes}</span>
-            </button>
-            
-            <button
-              onClick={() => handleVote('downvote')}
-              disabled={!user || isVoting}
-              className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 ${
-                userVote === 'downvote'
-                  ? 'bg-red-500/20 text-red-300 border border-red-500/30'
-                  : 'text-red-400 hover:text-red-300 hover:bg-red-500/10'
-              } disabled:text-zinc-600 disabled:cursor-not-allowed disabled:hover:bg-transparent ${
-                isVoting ? 'opacity-50' : ''
-              }`}
-            >
-              {isVoting && userVote !== 'upvote' ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-red-400"></div>
-              ) : (
-                <ThumbsDown className={`h-5 w-5 ${userVote === 'downvote' ? 'fill-current' : ''}`} />
-              )}
-              <span className="font-medium">{post.downvotes}</span>
-            </button>
-
-            <div className="flex items-center space-x-1 text-zinc-400">
-              <MessageSquare className="h-5 w-5" />
-              <span>{pagination?.total_comments || 0} comments</span>
+        {error && (
+          <div className="bg-zinc-800/50 border border-red-500/20 rounded-2xl p-8 mb-12 shadow-xl">
+            <div className="text-center space-y-3">
+              <div className="p-3 bg-red-500/20 rounded-2xl w-fit mx-auto">
+                <AlertTriangle className="h-6 w-6 text-red-400" />
+              </div>
+              <p className="text-red-400 font-medium">{error}</p>
             </div>
           </div>
+        )}
+
+        {/* Enhanced Post */}
+        <article className="bg-zinc-800/50 backdrop-blur-sm rounded-2xl border border-zinc-700 p-8 mb-12 shadow-xl">
+          {/* Post header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-blue-500/20 rounded-xl">
+                <User className="h-5 w-5 text-blue-400" />
+              </div>
+              <div>
+                <span className="font-semibold text-white text-lg">{post.username}</span>
+                <div className="flex items-center space-x-2 text-zinc-400 text-sm mt-1">
+                  <Clock className="h-3 w-3" />
+                  <span>{formatDate(post.created_at)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Enhanced News analysis summary */}
+          <div className="bg-zinc-700/30 rounded-2xl p-6 mb-6 border border-zinc-600/30">
+            <div className="flex items-center space-x-4 mb-6">
+              <div className="p-3 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl">
+                {getResultIcon(post.is_fake)}
+              </div>
+              <div>
+                <div className={`px-4 py-2 rounded-xl text-sm font-semibold border-2 ${
+                  post.is_fake 
+                    ? 'text-red-300 bg-red-500/20 border-red-500/30' 
+                    : 'text-green-300 bg-green-500/20 border-green-500/30'
+                }`}>
+                  {post.is_fake ? 'Likely Fake' : 'Likely Real'} ({post.confidence}% confidence)
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="bg-zinc-800/50 rounded-xl p-4">
+                <h4 className="text-sm font-semibold text-zinc-300 mb-3 flex items-center space-x-2">
+                  <MessageSquare className="h-4 w-4" />
+                  <span>Original Content:</span>
+                </h4>
+                <p className="text-zinc-200 leading-relaxed bg-zinc-700/30 p-4 rounded-lg border border-zinc-600/30">{post.news_content}</p>
+              </div>
+
+              <div className="bg-zinc-800/50 rounded-xl p-4">
+                <h4 className="text-sm font-semibold text-zinc-300 mb-3 flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>AI Analysis:</span>
+                </h4>
+                <p className="text-zinc-200 leading-relaxed bg-zinc-700/30 p-4 rounded-lg border border-zinc-600/30">{post.result_json.explanation}</p>
+              </div>
+            
+              {post.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {post.tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center space-x-2 bg-blue-500/20 text-blue-200 px-3 py-1 rounded-lg text-sm font-medium border border-blue-500/30"
+                    >
+                      <Tag className="h-3 w-3" />
+                      <span>{tag}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Enhanced Post content */}
+          <div className="mb-6">
+            <h4 className="text-sm font-semibold text-zinc-300 mb-3 flex items-center space-x-2">
+              <MessageSquare className="h-4 w-4" />
+              <span>Community Discussion:</span>
+            </h4>
+            <div className="text-zinc-200 leading-relaxed text-lg bg-zinc-700/20 rounded-xl p-6 border border-zinc-600/20">
+              {post.content}
+            </div>
+          </div>
+
+          {/* Enhanced Voting */}
+          <div className="flex items-center justify-between pt-6 border-t border-zinc-600/30">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => handleVote('upvote')}
+                disabled={!user || isVoting}
+                className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
+                  userVote === 'upvote'
+                    ? 'bg-green-500/20 text-green-300 border-2 border-green-500/40 shadow-green-500/20 shadow-lg'
+                    : 'text-green-400 hover:text-green-300 hover:bg-green-500/10 border-2 border-transparent hover:border-green-500/20'
+                } disabled:text-zinc-600 disabled:cursor-not-allowed disabled:hover:bg-transparent ${
+                  isVoting ? 'opacity-50' : ''
+                }`}
+              >
+                {isVoting && userVote !== 'downvote' ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-400"></div>
+                ) : (
+                  <ThumbsUp className={`h-5 w-5 ${userVote === 'upvote' ? 'fill-current' : ''}`} />
+                )}
+                <span>{post.upvotes}</span>
+              </button>
+              
+              <button
+                onClick={() => handleVote('downvote')}
+                disabled={!user || isVoting}
+                className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
+                  userVote === 'downvote'
+                    ? 'bg-red-500/20 text-red-300 border-2 border-red-500/40 shadow-red-500/20 shadow-lg'
+                    : 'text-red-400 hover:text-red-300 hover:bg-red-500/10 border-2 border-transparent hover:border-red-500/20'
+                } disabled:text-zinc-600 disabled:cursor-not-allowed disabled:hover:bg-transparent ${
+                  isVoting ? 'opacity-50' : ''
+                }`}
+              >
+                {isVoting && userVote !== 'upvote' ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-red-400"></div>
+                ) : (
+                  <ThumbsDown className={`h-5 w-5 ${userVote === 'downvote' ? 'fill-current' : ''}`} />
+                )}
+                <span>{post.downvotes}</span>
+              </button>
+            </div>
+
+            <div className="flex items-center space-x-2 bg-zinc-700/30 px-4 py-2 rounded-xl border border-zinc-600/30">
+              <MessageSquare className="h-5 w-5 text-zinc-400" />
+              <span className="text-zinc-300 font-medium">{pagination?.total_comments || 0} comments</span>
+            </div>
+          </div>
+        </article>
+
+        {/* Community Feedback Section */}
+        <div className="bg-zinc-800/50 backdrop-blur-sm rounded-2xl border border-zinc-700 p-8 mb-12 shadow-xl">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="p-2 bg-yellow-500/20 rounded-xl">
+              <CheckCircle className="h-5 w-5 text-yellow-400" />
+            </div>
+            <h3 className="text-xl font-bold text-white">Rate this Discussion</h3>
+          </div>
+          <ForumFeedbackForm forumPostId={post.id} />
         </div>
 
-        {/* Add comment form */}
+        {/* Enhanced Add comment form */}
         {user ? (
-          <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl border border-zinc-800 p-6 mb-8">
-            <h3 className="font-medium text-white mb-4">Add a Comment</h3>
-            <form onSubmit={handleCommentSubmit} className="space-y-4">
+          <div className="bg-zinc-800/50 backdrop-blur-sm rounded-2xl border border-zinc-700 p-8 mb-12 shadow-xl">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="p-2 bg-green-500/20 rounded-xl">
+                <Send className="h-5 w-5 text-green-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white">Join the Discussion</h3>
+            </div>
+            <form onSubmit={handleCommentSubmit} className="space-y-6">
               <textarea
                 value={newComment}
                 onChange={(e) => {
@@ -575,23 +637,25 @@ export default function ForumPostPage() {
                 onBlur={handleStopTyping}
                 placeholder="Share your thoughts on this analysis..."
                 rows={4}
-                className="w-full p-3 bg-zinc-800/50 border border-zinc-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-zinc-400"
+                className="w-full p-4 bg-zinc-700/50 border border-zinc-600 rounded-xl text-white placeholder-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-colors text-lg resize-none"
                 disabled={isSubmittingComment}
               />
               
-              {/* Polling status */}
-              <div className="text-sm text-blue-400 flex items-center space-x-1">
-                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-                <span>Auto-refreshing every 2 seconds</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-zinc-500">
-                  {newComment.length}/5 characters minimum
-                </p>
+              {/* Enhanced status indicators */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2 text-sm text-blue-400 bg-blue-500/10 px-3 py-1 rounded-lg border border-blue-500/20">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                    <span>Live updates active</span>
+                  </div>
+                  <p className="text-sm text-zinc-500">
+                    {newComment.length}/5 characters minimum
+                  </p>
+                </div>
                 <button
                   type="submit"
                   disabled={isSubmittingComment || newComment.trim().length < 5}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-zinc-600 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white px-8 py-3 rounded-xl font-semibold transition-all hover:scale-105 flex items-center space-x-2 shadow-lg disabled:hover:scale-100"
                 >
                   {isSubmittingComment ? (
                     <>
@@ -609,96 +673,129 @@ export default function ForumPostPage() {
             </form>
           </div>
         ) : (
-          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-8">
-            <p className="text-blue-400">
-              <Link href="/auth/login" className="text-blue-300 underline">Log in</Link> to join the discussion.
-            </p>
+          <div className="bg-zinc-800/50 backdrop-blur-sm rounded-2xl border border-blue-500/20 p-8 mb-12 shadow-xl">
+            <div className="text-center space-y-4">
+              <div className="p-4 bg-blue-500/20 rounded-2xl w-fit mx-auto">
+                <User className="h-8 w-8 text-blue-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white">Join the Discussion</h3>
+              <p className="text-zinc-400 leading-relaxed">
+                <Link 
+                  href="/auth/login" 
+                  className="text-blue-400 hover:text-blue-300 font-semibold transition-colors"
+                >
+                  Log in
+                </Link> to share your thoughts and engage with the community.
+              </p>
+            </div>
           </div>
         )}
 
-        {/* Comments */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium text-white">
-              Comments ({pagination?.total_comments || 0})
-            </h3>
-            <div className="flex items-center space-x-1 text-blue-400 text-xs">
-              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-              <span>Auto-refresh</span>
+        {/* Enhanced Comments Section */}
+        <div className="space-y-8">
+          <div className="flex items-center justify-between bg-zinc-800/30 rounded-2xl p-6 border border-zinc-700">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-purple-500/20 rounded-xl">
+                <MessageSquare className="h-5 w-5 text-purple-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white">
+                Discussion ({pagination?.total_comments || 0})
+              </h3>
+            </div>
+            <div className="flex items-center space-x-2 text-green-400 text-sm bg-green-500/10 px-3 py-1 rounded-lg border border-green-500/20">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span>Live comments</span>
             </div>
           </div>
 
           {comments.length === 0 ? (
-            <div className="text-center py-8">
-              <MessageSquare className="h-12 w-12 mx-auto text-zinc-600 mb-4" />
-              <p className="text-zinc-400">No comments yet. Be the first to comment!</p>
+            <div className="text-center py-20">
+              <div className="max-w-md mx-auto space-y-6">
+                <div className="p-8 bg-zinc-800/30 rounded-2xl border border-zinc-700">
+                  <MessageSquare className="h-16 w-16 text-purple-400 mx-auto mb-6" />
+                  <h4 className="text-xl font-bold text-white mb-4">Start the Conversation</h4>
+                  <p className="text-zinc-400">No comments yet. Be the first to share your thoughts!</p>
+                </div>
+              </div>
             </div>
           ) : (
             <>
-              {comments.map((comment, index) => {
-                // Use UTC for time comparison (more reliable)
-                const commentTime = new Date(comment.created_at);
-                const now = new Date();
-                const timeDiff = now.getTime() - commentTime.getTime();
-                
-                // Show effect for newly added comments OR comments less than 2 minutes old
-                const isNew = newlyAddedCommentIds.has(comment.id) || (timeDiff < 120000);
-                
-                // Debug log
-                console.log(`Comment ${comment.id}: isNew=${isNew}, index=${index}, timeDiff=${Math.round(timeDiff/1000)}s, inNewlyAdded=${newlyAddedCommentIds.has(comment.id)}`);
-                
-                return (
-                  <div 
-                    key={comment.id} 
-                    className={`backdrop-blur-sm rounded-xl border p-5 mb-4 transition-all duration-1000 relative ${
-                      isNew 
-                        ? 'new-comment-glow new-comment-shimmer border-4 border-red-500 bg-red-900/50' 
-                        : 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/70'
-                    }`}
-                  >
-                    {isNew && (
-                      <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500/80 to-purple-600/80 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg new-comment-pulse backdrop-blur-sm">
-                        New
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-3">
-                        <div className={`p-1 rounded-full ${isNew ? 'bg-blue-500/20' : 'bg-zinc-700'}`}>
-                          <User className={`h-4 w-4 ${isNew ? 'text-blue-400' : 'text-zinc-400'}`} />
+              <div className="space-y-6">
+                {comments.map((comment, index) => {
+                  // Use UTC for time comparison (more reliable)
+                  const commentTime = new Date(comment.created_at);
+                  const now = new Date();
+                  const timeDiff = now.getTime() - commentTime.getTime();
+                  
+                  // Show effect for newly added comments OR comments less than 2 minutes old
+                  const isNew = newlyAddedCommentIds.has(comment.id) || (timeDiff < 120000);
+                  
+                  return (
+                    <div 
+                      key={comment.id} 
+                      className={`backdrop-blur-sm rounded-2xl border p-6 transition-all duration-1000 relative shadow-lg hover:shadow-xl ${
+                        isNew 
+                          ? 'border-2 border-green-500/50 bg-gradient-to-r from-green-900/30 to-blue-900/30 shadow-green-500/20' 
+                          : 'bg-zinc-800/50 border-zinc-700 hover:border-zinc-600 hover:bg-zinc-800/70'
+                      }`}
+                    >
+                      {isNew && (
+                        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-green-500 to-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg animate-pulse">
+                          ✨ New
                         </div>
-                        <span className={`font-medium ${isNew ? 'text-blue-100' : 'text-white'}`}>{comment.username}</span>
+                      )}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-3">
+                          <div className={`p-2 rounded-xl ${isNew ? 'bg-green-500/20' : 'bg-purple-500/20'}`}>
+                            <User className={`h-4 w-4 ${isNew ? 'text-green-400' : 'text-purple-400'}`} />
+                          </div>
+                          <div>
+                            <span className={`font-semibold text-lg ${isNew ? 'text-green-100' : 'text-white'}`}>
+                              {comment.username}
+                            </span>
+                            <div className="flex items-center space-x-2 text-zinc-400 text-sm mt-1">
+                              <Clock className="h-3 w-3" />
+                              <span>{formatDate(comment.created_at)}</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-1 text-zinc-500">
-                        <Clock className="h-3 w-3" />
-                        <span className="text-xs">{formatDate(comment.created_at)}</span>
+                      <div className={`rounded-xl p-4 ${isNew ? 'bg-zinc-700/30' : 'bg-zinc-700/20'} border border-zinc-600/30`}>
+                        <p className="text-zinc-200 leading-relaxed">{comment.comment}</p>
                       </div>
                     </div>
-                    <p className="text-zinc-300">{comment.comment}</p>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
 
-              {/* Pagination */}
+              {/* Enhanced Pagination */}
               {pagination && pagination.total_pages > 1 && (
-                <div className="flex justify-center items-center space-x-4 mt-6">
+                <div className="flex justify-center items-center space-x-8 mt-12">
                   <button
                     onClick={() => setCurrentPage(currentPage - 1)}
                     disabled={!pagination.has_previous}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-zinc-600 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center space-x-3 px-8 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white rounded-2xl font-semibold transition-all hover:scale-105 shadow-lg disabled:hover:scale-100"
                   >
-                    Previous
+                    <ArrowLeft className="h-5 w-5" />
+                    <span>Previous</span>
                   </button>
                   
-                  <span className="text-zinc-300 bg-zinc-900/50 px-4 py-2 rounded-lg border border-zinc-800">
-                    Page {pagination.current_page} of {pagination.total_pages}
-                  </span>
+                  <div className="bg-zinc-800/50 border border-zinc-700 px-6 py-4 rounded-2xl shadow-xl">
+                    <span className="text-zinc-200 font-semibold">
+                      Page {pagination.current_page} of {pagination.total_pages}
+                    </span>
+                    <p className="text-xs text-zinc-400 mt-1">
+                      Total: {pagination.total_comments} comments
+                    </p>
+                  </div>
                   
                   <button
                     onClick={() => setCurrentPage(currentPage + 1)}
                     disabled={!pagination.has_next}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-zinc-600 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center space-x-3 px-8 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white rounded-2xl font-semibold transition-all hover:scale-105 shadow-lg disabled:hover:scale-100"
                   >
-                    Next
+                    <span>Next</span>
+                    <ArrowLeft className="h-5 w-5 rotate-180" />
                   </button>
                 </div>
               )}

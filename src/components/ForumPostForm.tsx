@@ -62,29 +62,35 @@ export default function ForumPostForm({ newsCheckId }: ForumPostFormProps) {
 
   if (isSubmitted) {
     return (
-      <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-        <div className="flex items-center space-x-2 mb-2">
-          <CheckCircle className="h-5 w-5 text-green-400" />
-          <p className="text-green-400 font-medium">Posted to Forum!</p>
+      <div className="bg-zinc-800/50 rounded-2xl border border-zinc-700 p-6 shadow-xl h-full flex flex-col justify-center">
+        <div className="text-center flex flex-col justify-center items-center min-h-[200px]">
+          <div className="p-4 bg-green-500/20 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+            <CheckCircle className="h-8 w-8 text-green-400" />
+          </div>
+          <h3 className="text-xl font-semibold text-white mb-2">Posted to Forum!</h3>
+          <p className="text-zinc-400 mb-4">Your insights are now part of the community discussion.</p>
+          <a 
+            href="/forum" 
+            className="inline-flex items-center space-x-2 text-blue-400 hover:text-blue-300 font-medium transition-colors"
+          >
+            <span>View in Forum</span>
+            <span>→</span>
+          </a>
         </div>
-        <a 
-          href="/forum" 
-          className="text-blue-400 hover:text-blue-300 underline text-sm"
-        >
-          View in Forum →
-        </a>
       </div>
     );
   }
 
   return (
-    <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl border border-zinc-800 p-6">
+    <div className="bg-zinc-800/50 rounded-2xl border border-zinc-700 p-6 shadow-xl h-full flex flex-col justify-center">
       <div className="flex items-center space-x-2 mb-4">
-        <MessageSquare className="h-5 w-5 text-blue-400" />
-        <h3 className="text-lg font-semibold text-white">Share to Forum</h3>
+        <div className="p-2 bg-blue-500/20 rounded-lg">
+          <MessageSquare className="h-5 w-5 text-blue-400" />
+        </div>
+        <h3 className="text-xl font-semibold text-white">Share to Forum</h3>
       </div>
       
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label htmlFor="forum-content" className="block text-sm font-medium text-zinc-300 mb-2">
             Share your thoughts about this analysis
@@ -95,16 +101,16 @@ export default function ForumPostForm({ newsCheckId }: ForumPostFormProps) {
             onChange={(e) => setContent(e.target.value)}
             placeholder="What do you think about this news check? Share your insights, additional context, or questions..."
             rows={4}
-            className="w-full p-3 bg-zinc-800/50 border border-zinc-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-zinc-500"
+            className="w-full p-4 bg-zinc-700/50 border border-zinc-600 rounded-xl text-white placeholder-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-colors resize-none"
             disabled={isSubmitting}
           />
-          <p className="text-xs text-zinc-500 mt-1">
+          <p className="text-xs text-zinc-400 mt-2">
             {content.length}/10 characters minimum
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
             <p className="text-red-400 text-sm">{error}</p>
           </div>
         )}
@@ -112,7 +118,7 @@ export default function ForumPostForm({ newsCheckId }: ForumPostFormProps) {
         <button
           type="submit"
           disabled={isSubmitting || content.trim().length < 10}
-          className="w-full bg-green-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:bg-zinc-600 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 px-6 rounded-xl font-semibold disabled:bg-zinc-600 disabled:cursor-not-allowed transition-all hover:scale-[1.02] flex items-center justify-center space-x-2 shadow-lg"
         >
           {isSubmitting ? (
             <>

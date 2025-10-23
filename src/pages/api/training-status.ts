@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { verifyToken } from '@/lib/auth';
-import { ModelTrainer } from '@/lib/model-trainer';
+import { improvedModelTrainer } from '@/lib/improved-model-trainer';
 import { FeedbackAnalyzer } from '@/lib/feedback-analyzer';
 
-const modelTrainer = new ModelTrainer();
+const modelTrainer = improvedModelTrainer;
 const feedbackAnalyzer = new FeedbackAnalyzer();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -27,32 +27,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Get current training status
-    const [accuracyMetrics, feedbackStats, feedbackPatterns] = await Promise.all([
-      modelTrainer.calculateAccuracyMetrics(),
-      feedbackAnalyzer.getFeedbackStats(),
-      feedbackAnalyzer.analyzeFeedbackPatterns()
-    ]);
+    const learningInsights = await modelTrainer.getLearningInsights();
 
-    const isTrainingActive = feedbackStats.totalFeedback >= 5;
-    const hasAccuracyData = accuracyMetrics.totalAnalyses >= 10;
+    const isTrainingActive = learningInsights.totalFeedback >= 5;
+    const hasAccuracyData = learningInsights.totalFeedback >= 10;
 
     const response = {
       training_active: isTrainingActive,
       accuracy_tracking_active: hasAccuracyData,
       current_status: {
-        total_feedback_received: feedbackStats.totalFeedback,
-        total_analyses_evaluated: accuracyMetrics.totalAnalyses,
-        current_accuracy: hasAccuracyData ? accuracyMetrics.accuracy : null,
-        feedback_trend: feedbackStats.recentTrend,
-        average_user_rating: feedbackStats.averageRating
+        total_feedback_received: learningInsights.totalFeedback,
+        total_analyses_evaluated: learningInsights.totalFeedback,
+        current_accuracy: hasAccuracyData ? learningInsights.agreementRate : null,
+        model_performance: learningInsights.modelPerformance,
+        agreement_rate: learningInsights.agreementRate
       },
       improvements_active: {
-        feedback_based_prompts: feedbackPatterns.suggestionPrompts.length > 0,
+        feedback_based_prompts: learningInsights.recommendedActions.length > 0,
         confidence_adjustments: hasAccuracyData,
-        pattern_recognition: feedbackPatterns.commonMistakes.length > 0
+        pattern_recognition: learningInsights.keyIssues.length > 0
       },
-      active_improvements: feedbackPatterns.suggestionPrompts,
-      next_milestone: getNextMilestone(feedbackStats.totalFeedback, accuracyMetrics.totalAnalyses),
+      active_improvements: learningInsights.recommendedActions,
+      next_milestone: getNextMilestone(learningInsights.totalFeedback, learningInsights.totalFeedback),
       how_it_works: {
         feedback_integration: "Your ratings and comments help identify common issues and improve analysis accuracy",
         confidence_calibration: "Historical performance data adjusts confidence scores to be more reliable", 
