@@ -243,42 +243,29 @@ const AnalysisPage: React.FC = () => {
   };
 
   const getResultInfo = (analysis: NewsAnalysis) => {
-    switch (analysis.content_type) {
-      case 'opinion':
-        return {
-          title: 'Opinion Content',
-          subtitle: `${analysis.confidence}% confidence in assessment`,
-          color: 'blue',
-          icon: <MessageSquare className="h-8 w-8 text-blue-400" />
-        };
-      case 'satirical':
-        return {
-          title: 'Satirical Content',
-          subtitle: `${analysis.confidence}% confidence in assessment`,
-          color: 'purple',
-          icon: <MessageSquare className="h-8 w-8 text-purple-400" />
-        };
-      case 'mixed':
-        return {
-          title: analysis.is_fake ? 'Mixed Content (False Claims)' : 'Mixed Content (Valid)',
-          subtitle: `${analysis.confidence}% confidence level`,
-          color: analysis.is_fake ? 'red' : 'yellow',
-          icon: analysis.is_fake ? <AlertTriangle className="h-8 w-8 text-red-400" /> : <CheckCircle className="h-8 w-8 text-yellow-400" />
-        };
-      case 'unclear':
-        return {
-          title: 'Unclear Content',
-          subtitle: `${analysis.confidence}% confidence in assessment`,
-          color: 'gray',
-          icon: <AlertTriangle className="h-8 w-8 text-gray-400" />
-        };
-      default: // factual_claim
-        return {
-          title: analysis.is_fake ? 'Likely Misinformation' : 'Appears Authentic',
-          subtitle: `${analysis.confidence}% confidence level`,
-          color: analysis.is_fake ? 'red' : 'green',
-          icon: analysis.is_fake ? <AlertTriangle className="h-8 w-8 text-red-400" /> : <CheckCircle className="h-8 w-8 text-green-400" />
-        };
+    // For all content types, use simple binary classification based on is_fake
+    if (analysis.content_type === 'opinion') {
+      return {
+        title: 'Opinion',
+        subtitle: `${analysis.confidence}% confidence in assessment`,
+        color: 'blue',
+        icon: <MessageSquare className="h-8 w-8 text-blue-400" />
+      };
+    } else if (analysis.content_type === 'unclear') {
+      return {
+        title: 'Unclear',
+        subtitle: `${analysis.confidence}% confidence in assessment`,
+        color: 'gray',
+        icon: <AlertTriangle className="h-8 w-8 text-gray-400" />
+      };
+    } else {
+      // For factual claims, satirical, mixed - use simple Fake vs True classification
+      return {
+        title: analysis.is_fake ? 'Fake News' : 'Appears True',
+        subtitle: `${analysis.confidence}% confidence level`,
+        color: analysis.is_fake ? 'red' : 'green',
+        icon: analysis.is_fake ? <AlertTriangle className="h-8 w-8 text-red-400" /> : <CheckCircle className="h-8 w-8 text-green-400" />
+      };
     }
   };
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/components/AuthContext';
-import { Brain, TrendingUp, AlertTriangle, CheckCircle, BarChart3, Lightbulb, MessageSquare, Users, Target, Activity } from 'lucide-react';
+import { Brain, TrendingUp, AlertTriangle, CheckCircle, BarChart3, Lightbulb, MessageSquare, Users, Target, Activity, RotateCcw, X } from 'lucide-react';
 
 interface ModelInsights {
   model_performance: {
@@ -40,6 +40,9 @@ export default function ModelDashboard() {
   const [insights, setInsights] = useState<ModelInsights | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetConfirmation, setResetConfirmation] = useState('');
 
   useEffect(() => {
     if (!user || !token) return;
@@ -67,6 +70,37 @@ export default function ModelDashboard() {
       setError('Network error occurred');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResetModel = async () => {
+    if (resetConfirmation !== 'RESET MODEL') {
+      return;
+    }
+
+    try {
+      setIsResetting(true);
+      const response = await fetch('/api/model-insights/reset', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        setShowResetModal(false);
+        setResetConfirmation('');
+        // Refresh insights after reset
+        await fetchModelInsights();
+      } else {
+        setError('Failed to reset model performance');
+      }
+    } catch (error) {
+      console.error('Error resetting model:', error);
+      setError('Network error during reset');
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -101,6 +135,17 @@ export default function ModelDashboard() {
                   Semantic feedback analysis & model performance monitoring
                 </p>
               </div>
+            </div>
+            
+            {/* Admin Actions */}
+            <div className="flex items-center justify-end space-x-4">
+              <button
+                onClick={() => setShowResetModal(true)}
+                className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-semibold transition-all hover:scale-105 shadow-lg border-2 border-red-500/30"
+              >
+                <RotateCcw className="h-5 w-5" />
+                <span>Reset Model</span>
+              </button>
             </div>
           </div>
         </div>
@@ -340,6 +385,88 @@ export default function ModelDashboard() {
           </div>
         ) : null}
       </div>
+
+      {/* Dangerous Reset Modal */}
+      {showResetModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 border-2 border-red-500/30 rounded-2xl p-8 max-w-md w-full shadow-2xl shadow-red-500/20">
+            <div className="text-center space-y-6">
+              {/* Warning Icon */}
+              <div className="p-4 bg-red-500/20 rounded-full w-fit mx-auto border-2 border-red-500/40">
+                <AlertTriangle className="h-12 w-12 text-red-400" />
+              </div>
+              
+              {/* Title and Warning */}
+              <div>
+                <h2 className="text-2xl font-bold text-red-400 mb-3">⚠️ DANGEROUS ACTION</h2>
+                <p className="text-zinc-300 leading-relaxed mb-4">
+                  This will <strong className="text-red-400">permanently reset</strong> all model performance data, including:
+                </p>
+                <ul className="text-sm text-zinc-400 text-left space-y-2 bg-zinc-800/50 p-4 rounded-xl border border-red-500/20">
+                  <li>• All user feedback analysis</li>
+                  <li>• Performance accuracy metrics</li>
+                  <li>• Confidence calibration data</li>
+                  <li>• Content pattern recognition</li>
+                  <li>• Training insights & recommendations</li>
+                </ul>
+              </div>
+
+              {/* Confirmation Input */}
+              <div className="space-y-3">
+                <p className="text-sm text-zinc-400">
+                  Type <strong className="text-red-400 font-mono">RESET MODEL</strong> to confirm:
+                </p>
+                <input
+                  type="text"
+                  value={resetConfirmation}
+                  onChange={(e) => setResetConfirmation(e.target.value)}
+                  placeholder="Type 'RESET MODEL' here..."
+                  className="w-full p-3 bg-zinc-800/50 border-2 border-red-500/30 rounded-xl text-white placeholder-zinc-500 focus:border-red-400 focus:ring-2 focus:ring-red-500/20 focus:outline-none transition-colors font-mono text-center"
+                  disabled={isResetting}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-4">
+                <button
+                  onClick={() => {
+                    setShowResetModal(false);
+                    setResetConfirmation('');
+                  }}
+                  disabled={isResetting}
+                  className="flex-1 bg-zinc-700 hover:bg-zinc-600 text-white px-6 py-3 rounded-xl font-semibold transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleResetModel}
+                  disabled={resetConfirmation !== 'RESET MODEL' || isResetting}
+                  className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl font-semibold transition-all flex items-center justify-center space-x-2"
+                >
+                  {isResetting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <span>Resetting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="h-5 w-5" />
+                      <span>Reset Model</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Additional Warning */}
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+                <p className="text-xs text-red-300 leading-relaxed">
+                  <strong>⚠️ This action cannot be undone!</strong> The AI will revert to baseline performance and will need to relearn from new user feedback.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

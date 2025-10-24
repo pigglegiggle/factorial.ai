@@ -18,6 +18,7 @@ interface ForumPost {
     confidence: number;
     explanation: string;
     tags: string[];
+    content_type?: 'factual_claim' | 'opinion' | 'unclear';
   };
   is_fake: boolean;
   confidence: number;
@@ -57,7 +58,7 @@ export default function ForumPage() {
       setIsLoading(true);
       const params = new URLSearchParams({
         page: currentPage.toString(),
-        limit: '10',
+        limit: '50', // Get more posts for better client-side sorting
         sort: sortBy,
       });
       
@@ -78,13 +79,44 @@ export default function ForumPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setPosts(data.posts);
-        setPagination(data.pagination);
+        let sortedPosts = data.posts || [];
+        
+        // Apply client-side sorting to ensure it works
+        if (sortBy === 'recent') {
+          sortedPosts = sortedPosts.sort((a: ForumPost, b: ForumPost) => {
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          });
+        } else if (sortBy === 'popular') {
+          sortedPosts = sortedPosts.sort((a: ForumPost, b: ForumPost) => {
+            // Sort by total engagement (upvotes + downvotes), then by upvotes as tiebreaker
+            const aScore = (a.upvotes - a.downvotes) + (a.upvotes * 0.1);
+            const bScore = (b.upvotes - b.downvotes) + (b.upvotes * 0.1);
+            return bScore - aScore;
+          });
+        }
+        
+        // Paginate the sorted results client-side
+        const startIndex = (currentPage - 1) * 10;
+        const endIndex = startIndex + 10;
+        const paginatedPosts = sortedPosts.slice(startIndex, endIndex);
+        
+        setPosts(paginatedPosts);
+        
+        // Update pagination info
+        const totalPosts = sortedPosts.length;
+        const totalPages = Math.ceil(totalPosts / 10);
+        setPagination({
+          current_page: currentPage,
+          total_pages: totalPages,
+          total_posts: totalPosts,
+          has_next: currentPage < totalPages,
+          has_previous: currentPage > 1
+        });
         
         // Initialize user votes from the backend data
-        if (user && data.posts) {
+        if (user && paginatedPosts) {
           const votes: { [postId: number]: 'upvote' | 'downvote' | null } = {};
-          data.posts.forEach((post: ForumPost) => {
+          paginatedPosts.forEach((post: ForumPost) => {
             votes[post.id] = post.user_vote || null;
           });
           setUserVotes(votes);
@@ -298,11 +330,19 @@ export default function ForumPage() {
 
         {/* Enhanced Filters */}
         <div className="bg-zinc-800/50 backdrop-blur-sm rounded-2xl border border-zinc-700 p-8 mb-12 shadow-xl">
-          <div className="flex items-center space-x-3 mb-6">
-            <div className="p-2 bg-purple-500/20 rounded-lg">
-              <Tag className="h-5 w-5 text-purple-400" />
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-purple-500/20 rounded-lg">
+                <Tag className="h-5 w-5 text-purple-400" />
+              </div>
+              <h2 className="text-xl font-bold text-white">Filter & Sort Posts</h2>
             </div>
-            <h2 className="text-xl font-bold text-white">Filter & Sort Posts</h2>
+            <div className="flex items-center space-x-2 bg-zinc-700/30 px-4 py-2 rounded-xl border border-zinc-600/30">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span className="text-sm text-zinc-300">
+                Sorted by: {sortBy === 'recent' ? '🕒 Recent' : '🔥 Popular'}
+              </span>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
@@ -315,8 +355,8 @@ export default function ForumPage() {
                 }}
                 className="w-full p-4 bg-zinc-700/50 border border-zinc-600 rounded-xl text-white placeholder-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-colors text-lg"
               >
-                <option value="recent">Most Recent</option>
-                <option value="popular">Most Popular</option>
+                <option value="recent">Most Recent (Newest First)</option>
+                <option value="popular">Most Popular (Top Voted)</option>
               </select>
             </div>
 
@@ -399,11 +439,22 @@ export default function ForumPage() {
                   <div className="bg-zinc-700/30 rounded-2xl p-6 mb-6 border border-zinc-600/30">
                     <div className="flex items-center justify-between mb-4">
                       <div className={`px-4 py-2 rounded-xl text-sm font-semibold border-2 ${
-                        post.is_fake 
+                        post.result_json.content_type === 'opinion' 
+                          ? 'text-blue-300 bg-blue-500/20 border-blue-500/30'
+                          : post.result_json.content_type === 'unclear'
+                          ? 'text-gray-300 bg-gray-500/20 border-gray-500/30'
+                          : post.is_fake 
                           ? 'text-red-300 bg-red-500/20 border-red-500/30' 
                           : 'text-green-300 bg-green-500/20 border-green-500/30'
                       }`}>
-                        {post.is_fake ? 'Likely Fake' : 'Likely Real'} ({post.confidence}% confidence)
+                        {post.result_json.content_type === 'opinion' 
+                          ? 'Opinion Content'
+                          : post.result_json.content_type === 'unclear'
+                          ? 'Unclear Content'
+                          : post.is_fake 
+                          ? 'Fake News' 
+                          : 'Appears True'
+                        } ({post.confidence}% confidence)
                       </div>
                     </div>
                     

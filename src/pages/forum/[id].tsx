@@ -32,6 +32,7 @@ interface ForumPost {
     confidence: number;
     explanation: string;
     tags: string[];
+    content_type?: 'factual_claim' | 'opinion' | 'unclear';
   };
   is_fake: boolean;
   confidence: number;
@@ -501,11 +502,22 @@ export default function ForumPostPage() {
               </div>
               <div>
                 <div className={`px-4 py-2 rounded-xl text-sm font-semibold border-2 ${
-                  post.is_fake 
+                  post.result_json.content_type === 'opinion' 
+                    ? 'text-blue-300 bg-blue-500/20 border-blue-500/30'
+                    : post.result_json.content_type === 'unclear'
+                    ? 'text-gray-300 bg-gray-500/20 border-gray-500/30'
+                    : post.is_fake 
                     ? 'text-red-300 bg-red-500/20 border-red-500/30' 
                     : 'text-green-300 bg-green-500/20 border-green-500/30'
                 }`}>
-                  {post.is_fake ? 'Likely Fake' : 'Likely Real'} ({post.confidence}% confidence)
+                  {post.result_json.content_type === 'opinion' 
+                    ? 'Opinion Content'
+                    : post.result_json.content_type === 'unclear'
+                    ? 'Unclear Content'
+                    : post.is_fake 
+                    ? 'Fake News' 
+                    : 'Appears True'
+                  } ({post.confidence}% confidence)
                 </div>
               </div>
             </div>

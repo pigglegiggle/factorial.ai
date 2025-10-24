@@ -77,14 +77,16 @@ export default function HistoryPage() {
       if (response.ok) {
         setHistory(data.history);
         
-        // Calculate enhanced statistics including content types
+        // Calculate enhanced statistics from USER'S history only
+        const userHistory = data.history || [];
         const enhancedStats = {
-          ...data.statistics,
-          opinion_count: data.history.filter((item: HistoryItem) => item.result_json.content_type === 'opinion').length,
-          satirical_count: data.history.filter((item: HistoryItem) => item.result_json.content_type === 'satirical').length,
-          mixed_count: data.history.filter((item: HistoryItem) => item.result_json.content_type === 'mixed').length,
-          unclear_count: data.history.filter((item: HistoryItem) => item.result_json.content_type === 'unclear').length,
-          factual_count: data.history.filter((item: HistoryItem) => !item.result_json.content_type || item.result_json.content_type === 'factual_claim').length,
+          total_checks: userHistory.length,
+          fake_count: userHistory.filter((item: HistoryItem) => item.is_fake && (!item.result_json.content_type || item.result_json.content_type === 'factual_claim')).length,
+          real_count: userHistory.filter((item: HistoryItem) => !item.is_fake && (!item.result_json.content_type || item.result_json.content_type === 'factual_claim')).length,
+          opinion_count: userHistory.filter((item: HistoryItem) => item.result_json.content_type === 'opinion').length,
+          unclear_count: userHistory.filter((item: HistoryItem) => item.result_json.content_type === 'unclear').length,
+          avg_confidence: userHistory.length > 0 ? Math.round(userHistory.reduce((sum: number, item: HistoryItem) => sum + item.confidence, 0) / userHistory.length) : 0,
+          fake_percentage: userHistory.length > 0 ? Math.round((userHistory.filter((item: HistoryItem) => item.is_fake).length / userHistory.length) * 100) : 0
         };
         
         setStatistics(enhancedStats);
@@ -129,22 +131,6 @@ export default function HistoryPage() {
           bgColor: 'bg-blue-500/20 border border-blue-500/30',
           textColor: 'text-blue-300'
         };
-      case 'satirical':
-        return {
-          title: 'Satirical Content',
-          color: 'purple',
-          icon: <MessageSquare className="h-6 w-6 text-purple-400" />,
-          bgColor: 'bg-purple-500/20 border border-purple-500/30',
-          textColor: 'text-purple-300'
-        };
-      case 'mixed':
-        return {
-          title: item.is_fake ? 'Mixed Content (Contains False Claims)' : 'Mixed Content (Mostly Valid)',
-          color: item.is_fake ? 'red' : 'yellow',
-          icon: item.is_fake ? <AlertTriangle className="h-6 w-6 text-red-400" /> : <CheckCircle className="h-6 w-6 text-yellow-400" />,
-          bgColor: item.is_fake ? 'bg-red-500/20 border border-red-500/30' : 'bg-yellow-500/20 border border-yellow-500/30',
-          textColor: item.is_fake ? 'text-red-300' : 'text-yellow-300'
-        };
       case 'unclear':
         return {
           title: 'Unclear Content',
@@ -153,9 +139,9 @@ export default function HistoryPage() {
           bgColor: 'bg-gray-500/20 border border-gray-500/30',
           textColor: 'text-gray-300'
         };
-      default: // factual_claim
+      default: // factual_claim or any other type
         return {
-          title: item.is_fake ? 'Likely Misinformation' : 'Appears Authentic',
+          title: item.is_fake ? 'Fake News' : 'Appears True',
           color: item.is_fake ? 'red' : 'green',
           icon: item.is_fake ? <AlertTriangle className="h-6 w-6 text-red-400" /> : <CheckCircle className="h-6 w-6 text-green-400" />,
           bgColor: item.is_fake ? 'bg-red-500/20 border border-red-500/30' : 'bg-green-500/20 border border-green-500/30',
@@ -280,7 +266,7 @@ export default function HistoryPage() {
 
         {/* Enhanced Statistics */}
         {statistics && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-6 mb-16">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-16">
             <div className="bg-zinc-800/50 backdrop-blur-sm rounded-2xl border border-zinc-700 p-6 hover:border-zinc-600 hover:bg-zinc-800/70 transition-all duration-300 shadow-xl hover:shadow-2xl group">
               <div className="flex items-center justify-between mb-4">
                 <div className="p-2 bg-blue-500/20 rounded-xl group-hover:bg-blue-500/30 transition-colors">
@@ -300,7 +286,7 @@ export default function HistoryPage() {
                   <CheckCircle className="h-5 w-5 text-green-400" />
                 </div>
               </div>
-              <h3 className="font-semibold text-zinc-300 mb-2 text-xs uppercase tracking-wider">Authentic</h3>
+              <h3 className="font-semibold text-zinc-300 mb-2 text-xs uppercase tracking-wider">Appears True</h3>
               <p className="text-3xl font-bold text-green-400 mb-2">{statistics.real_count}</p>
               <div className="w-full bg-zinc-700 rounded-full h-1.5">
                 <div className="bg-gradient-to-r from-green-500 to-emerald-500 h-1.5 rounded-full" 
@@ -315,7 +301,7 @@ export default function HistoryPage() {
                   <AlertTriangle className="h-5 w-5 text-red-400" />
                 </div>
               </div>
-              <h3 className="font-semibold text-zinc-300 mb-2 text-xs uppercase tracking-wider">Misinformation</h3>
+              <h3 className="font-semibold text-zinc-300 mb-2 text-xs uppercase tracking-wider">Fake News</h3>
               <p className="text-3xl font-bold text-red-400 mb-2">{statistics.fake_count}</p>
               <div className="w-full bg-zinc-700 rounded-full h-1.5">
                 <div className="bg-gradient-to-r from-red-500 to-orange-500 h-1.5 rounded-full" 
@@ -341,15 +327,15 @@ export default function HistoryPage() {
 
             <div className="bg-zinc-800/50 backdrop-blur-sm rounded-2xl border border-zinc-700 p-6 hover:border-zinc-600 hover:bg-zinc-800/70 transition-all duration-300 shadow-xl hover:shadow-2xl group">
               <div className="flex items-center justify-between mb-4">
-                <div className="p-2 bg-purple-500/20 rounded-xl group-hover:bg-purple-500/30 transition-colors">
-                  <MessageSquare className="h-5 w-5 text-purple-400" />
+                <div className="p-2 bg-gray-500/20 rounded-xl group-hover:bg-gray-500/30 transition-colors">
+                  <AlertTriangle className="h-5 w-5 text-gray-400" />
                 </div>
               </div>
-              <h3 className="font-semibold text-zinc-300 mb-2 text-xs uppercase tracking-wider">Satirical</h3>
-              <p className="text-3xl font-bold text-purple-400 mb-2">{statistics.satirical_count || 0}</p>
+              <h3 className="font-semibold text-zinc-300 mb-2 text-xs uppercase tracking-wider">Unclear</h3>
+              <p className="text-3xl font-bold text-gray-400 mb-2">{statistics.unclear_count || 0}</p>
               <div className="w-full bg-zinc-700 rounded-full h-1.5">
-                <div className="bg-gradient-to-r from-purple-400 to-purple-600 h-1.5 rounded-full" 
-                     style={{width: `${statistics.total_checks > 0 ? ((statistics.satirical_count || 0) / statistics.total_checks) * 100 : 0}%`}}>
+                <div className="bg-gradient-to-r from-gray-400 to-gray-600 h-1.5 rounded-full" 
+                     style={{width: `${statistics.total_checks > 0 ? ((statistics.unclear_count || 0) / statistics.total_checks) * 100 : 0}%`}}>
                 </div>
               </div>
             </div>
