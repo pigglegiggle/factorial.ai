@@ -79,6 +79,9 @@ DATABASE_URL="postgresql://username:password@your-neon-host/dbname?sslmode=requi
 # Google Gemini API
 GEMINI_API_KEY="your_gemini_api_key_here"
 
+# NewsAPI
+NEWS_API_KEY="your_news_api_here"
+
 # JWT Secret (generate a strong random string)
 JWT_SECRET="your_jwt_secret_here"
 
@@ -92,6 +95,11 @@ NODE_ENV="development"
 1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
 2. Create a new API key
 3. Add it to your `.env.local` file
+
+#### News API Key:
+1. Go to [News API](https://newsapi.org/)
+2. Create new account
+3. Copy api key to your `.env.local` file
 
 #### Neon Database URL:
 1. Go to your Neon dashboard
