@@ -1,10 +1,19 @@
-# Fake News Detector with Gemini AI
+# Factorial.ai — AI-Powered Fake News Detector
 
-A comprehensive web application that uses Google's Gemini AI to detect fake news, with community feedback and forum features.
+Factorial.ai is an AI-powered web app that detects misinformation in real time using Google’s Gemini API. It combines automated news verification with a community-driven feedback system, empowering users to discuss, validate, and learn from shared content.
+
+
+[🌐 Live Demo](https://factorial-ai.sinpw.site)
+
+## 🖼️ App Preview
+![Factorial.ai Screenshot](public/screenshot.png)
 
 ## 🚀 Features
 
 - **AI-Powered News Detection**: Uses Google Gemini API for intelligent news analysis
+- **Latest News Feed**: Real-time updates on trending news and fact checks
+- **AI Analysis Progress**: Live tracking of analysis status with progress indicators
+- **AI Training Dashboard**: Monitor and improve model performance with training insights
 - **User Authentication**: Secure JWT-based authentication system
 - **Community Feedback**: Users can rate and comment on analysis results
 - **Forum System**: Share results and discuss with the community
@@ -19,6 +28,7 @@ A comprehensive web application that uses Google's Gemini AI to detect fake news
 - **Backend**: Next.js API Routes (Serverless)
 - **Database**: Neon Postgres (Serverless)
 - **AI**: Google Gemini API
+- **News Data**: NewsAPI for real-time news updates
 - **Authentication**: JWT tokens with bcrypt password hashing
 - **Icons**: Lucide React
 - **Deployment**: Vercel-ready
@@ -35,8 +45,8 @@ A comprehensive web application that uses Google's Gemini AI to detect fake news
 ### 1. Clone and Install
 
 ```bash
-git clone <repository-url>
-cd my-app
+git clone https://github.com/pigglegiggle/factorial.ai.git
+cd factorial.ai
 npm install
 ```
 
@@ -99,9 +109,9 @@ Visit [http://localhost:3000](http://localhost:3000) to see the application.
 ## 📖 Usage Guide
 
 ### 1. User Registration & Authentication
-- Create an account or sign in
-- Secure JWT-based authentication
-- Profile management
+- Create an account or sign in at `/auth/register` or `/auth/login`
+- JWT-based authentication with token storage
+- Profile management via `/api/auth/profile`
 
 ### 2. News Analysis
 - Enter news text or paste a URL
@@ -122,9 +132,58 @@ Visit [http://localhost:3000](http://localhost:3000) to see the application.
 - Export history as CSV
 - Track analysis trends over time
 
+### 5. AI Training Dashboard
+- Monitor model performance metrics
+- Review training progress and accuracy
+- Access detailed training logs
+- Fine-tune model parameters
+- Track improvements over time
+
+### 6. Latest News Feed
+- View real-time updates of trending news
+- Track ongoing fact-checking progress
+- Filter news by categories and sources
+- See live AI analysis status indicators
+- Get instant notifications for completed analyses
+
+##   API Testing with Postman
+
+### Authentication
+```
+POST https://factorial-ai.sinpw.site/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "your-email@example.com",
+  "password": "your-password"
+}
+```
+Response includes JWT token for API calls.
+
+### News Analysis
+```
+POST https://factorial-ai.sinpw.site/api/check-news
+Authorization: Bearer <your-jwt-token>
+Content-Type: application/json
+
+{
+  "input_text": "Your news text here"
+}
+```
+
+### Forum & Feedback
+- Create feedback: POST `/api/feedback`
+- List forum posts: GET `/api/forum`
+- Add comment: POST `/api/forum/{id}/comments`
+- Vote: POST `/api/forum/{id}/vote`
+
+Full API documentation and Postman collection available on request.
+
 ## 🚀 Deployment
 
-### Deploy to Vercel
+The application is deployed at [https://factorial-ai.sinpw.site](https://factorial-ai.sinpw.site)
+
+### Deploy Your Own Instance
 
 1. **Prepare for deployment**:
    ```bash
@@ -155,35 +214,27 @@ Make sure to set these in your Vercel dashboard:
 - `JWT_SECRET`
 - `NODE_ENV=production`
 
-## 🧪 Testing the Application
-
-### Test User Registration
-1. Go to `/auth/register`
-2. Create a test account
-3. Verify login works
+## 🧪 Testing
+### Manual Testing Guide
+1. Create a test account
+2. Verify login works
 
 ### Test News Analysis
 1. Log in to your account
 2. Try different types of content:
-   - Real news articles
-   - Satirical content
+   - Fake Statements
+   - Fact Statements
+   - Opinions
+   - Factual Claims
    - Social media posts
    - URLs from news websites
+   - Real news articles
 
 ### Test Community Features
 1. Submit feedback on analysis results
 2. Create forum posts
 3. Vote on posts
 4. Check your history page
-
-## 📞 Support
-
-If you encounter any issues:
-
-1. Check the troubleshooting section above
-2. Search existing GitHub issues
-3. Create a new issue with detailed description
-4. Include error logs and environment details
 
 ---
 
