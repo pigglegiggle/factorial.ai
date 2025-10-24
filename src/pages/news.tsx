@@ -19,6 +19,9 @@ interface NewsResponse {
   status: string;
   totalResults: number;
   articles: NewsArticle[];
+  query?: string;
+  page?: number;
+  pageSize?: number;
 }
 
 export default function NewsPage() {
@@ -42,11 +45,12 @@ export default function NewsPage() {
     
     try {
       const response = await fetch(
-        `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&apiKey=d9d830f24ce2487d9cb2f53e740953ec&sortBy=publishedAt&pageSize=20`
+        `/api/news?q=${encodeURIComponent(query)}&sortBy=publishedAt&pageSize=20`
       );
       
       if (!response.ok) {
-        throw new Error('Failed to fetch news articles');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to fetch news articles');
       }
 
       const data: NewsResponse = await response.json();
@@ -55,7 +59,11 @@ export default function NewsPage() {
       setHasSearched(true);
     } catch (error) {
       console.error('Error fetching news:', error);
-      setError('Failed to fetch news articles. Please try again.');
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Failed to fetch news articles. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
