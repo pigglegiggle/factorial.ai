@@ -5,6 +5,7 @@ Factorial.ai is an AI-powered web app that detects misinformation in real time u
 
 [🌐 Live Demo](https://factorial-ai.sinpw.site)
 
+
 ## 🖼️ App Preview
 ![Factorial.ai Screenshot](public/screenshot.png)
 
